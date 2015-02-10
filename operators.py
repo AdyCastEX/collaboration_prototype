@@ -4,6 +4,7 @@ import threading
 import queue
 import socket
 from . import encoder
+from . import decoder
 
 class EncodeOperation(bpy.types.Operator):
     '''gets the last executed operator and encodes it for sending'''
@@ -32,24 +33,42 @@ class EncodeOperation(bpy.types.Operator):
             except AttributeError:
                 print("encode error")
         return {'FINISHED'}
+        
     
 class StartSession(bpy.types.Operator):
-    ''' initiates a persistent collaborative session '''
+    ''' initiates a persistent collaborative session ''' 
+    
     bl_idname = "development.start_session"
     bl_label = "Start Session"
     bl_description = "Initiates a persistent collaborative session"
     
+    '''
+    Attributes
+    inqueue  --  a queue object used as temporary storage for incoming operations
+    outqueue --  a queue object used as temporary storage for outgoing operations
+    sock     --  a socket object used to listen to the server
+    address  --  a tuple containing the ip address and port of the socket listener
+    dec      --  a decoder object used to decode and execute a received operation
+    '''
     def invoke(self,context, event):
         
         #change to active state only if the operator is inactive
         if context.scene.thread_flag == False:
+            #initialize flags and storage objects
             context.scene.thread_flag = True
             context.scene.modal_flag = True
             self.inqueue = queue.Queue(20)
             self.outqueue = queue.Queue(20)
-            listening_thread = threading.Thread(target=self.listener,args=(12345,))
+            self.dec = decoder.Decoder()
+            
+            #attempt bind the listener socket starting from the specified port 
+            self.bind_listener(12345)
+            #create start the thread for the listener
+            listening_thread = threading.Thread(target=self.listener,args=())
             listening_thread.start()
+            
             wm = context.window_manager
+            #add an event timer that triggers every n seconds
             self._timer = wm.event_timer_add(1.0,context.window)
             #add a modal handler that will allow the plugin to listen for events
             context.window_manager.modal_handler_add(self)
@@ -59,7 +78,7 @@ class StartSession(bpy.types.Operator):
     def execute(self,context):
         if bpy.context.active_object != None:
             bpy.context.scene.active_obj_name = bpy.context.active_object.name 
-        bpy.ops.development.encode_operation()
+        self.encode_operation()
         print(bpy.context.scene.active_obj_name)
         return {'FINISHED'}
     
@@ -67,41 +86,86 @@ class StartSession(bpy.types.Operator):
         
         #if the modal is no longer active, stop the operation of the thread and finish the operator
         if bpy.context.scene.modal_flag == False:
+            self.unbind_listener()
             bpy.context.scene.thread_flag = False
             return {'FINISHED'}
         
         #if the event matches any of the event types listed, call the execute method
         elif event.type in ('LEFTMOUSE','RIGHTMOUSE','ENTER'):
-            pass#self.execute(context)
+            self.execute(context)
             
         elif event.type in ('LEFTMOUSE','RIGHTMOUSE','ENTER') and event.value in ('CLICK'):
             pass#self.execute(context)
         
-        if event.type == 'TIMER':
-           bpy.ops.development.encode_operation()
+        if event.type in ('TIMER'):
+           self.decode_operation()
         
             
         return {'PASS_THROUGH'}
     
-    def listener(self,port):
+    def bind_listener(self,port):
         ''' sets up a server listener'''
         self.sock = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
+        #dynamically get the hostname of the machine
         host = socket.gethostname()
         temp_port = port
         bind_success = False
+        #attempt to bind the socket to a specific port until a free port is found
         while bind_success == False:
             try:
                 self.sock.bind((host,temp_port))
                 bind_success = True
             except OSError:
+                #if the port is taken, check the next one
                 temp_port += 1
                 
+        #set the address which is a tuple containing the ip address and port of the socket
         self.address = self.sock.getsockname()
         
+    def unbind_listener(self):
+        '''removes the server listener'''
+        self.sock.close()
+    
+    def listener(self):
+        '''listens for incoming data from the server'''
+        
+        #continue the loop only if the thread is clear to run
         while bpy.context.scene.thread_flag == True:
-            print("Listening for requests...")
-            data,addr = self.sock.recvfrom(4096)
-            print(data)
+            try:
+                print("Listening for requests...")
+                data,addr = self.sock.recvfrom(4096)
+                print(data)
+            except OSError:
+                #a sample exception is when the socket is closed while waiting for data
+                break
+            
+    def encode_operation(self):
+        #attempt to get an operator only if the operators list is not empty
+        if len(bpy.context.window_manager.operators) > 0:
+            #get the last executed operator
+            latest_op = bpy.context.window_manager.operators[-1]
+            try:
+                enc = encoder.Encoder()
+                #get the method that matches the name of the last operator
+                encode_function = getattr(enc,enc.format_op_name(latest_op.name))
+                active_object = bpy.context.active_object
+                mode = bpy.context.mode
+                #execute the method to get an encoded operation
+                operation = encode_function(latest_op,active_object,mode)
+                if not self.inqueue.full():
+                    self.inqueue.put(operation)
+                print(operation)
+            except AttributeError:
+                print("encode error")
+        
+            
+    def decode_operation(self):
+        print("decode")
+        if not self.inqueue.empty():
+            op = self.inqueue.get()
+            decode_function = getattr(self.dec,self.dec.format_op_name(op['name']))
+            decode_function(op)
+        
             
 class EndSession(bpy.types.Operator):
     ''' ends a persistent collaborative session '''
