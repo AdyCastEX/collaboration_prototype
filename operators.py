@@ -66,6 +66,7 @@ class StartSession(bpy.types.Operator):
             #create start the thread for the listener
             listening_thread = threading.Thread(target=self.listener,args=())
             listening_thread.start()
+            self.subscribe(('192.168.56.1',5050))
             
             wm = context.window_manager
             #add an event timer that triggers every n seconds
@@ -104,7 +105,11 @@ class StartSession(bpy.types.Operator):
         return {'PASS_THROUGH'}
     
     def bind_listener(self,port):
-        ''' sets up a server listener'''
+        ''' sets up a server listener
+        
+        Parameters
+        port -- the port number of the listener
+        '''
         self.sock = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
         #dynamically get the hostname of the machine
         host = socket.gethostname()
@@ -125,6 +130,8 @@ class StartSession(bpy.types.Operator):
     def unbind_listener(self):
         '''removes the server listener'''
         self.sock.close()
+        #remove the timer to prevent redundancy when the listener is re-initialized
+        bpy.context.window_manager.event_timer_remove(self._timer)
     
     def listener(self):
         '''listens for incoming data from the server'''
@@ -139,7 +146,26 @@ class StartSession(bpy.types.Operator):
                 #a sample exception is when the socket is closed while waiting for data
                 break
             
+    def subscribe(self,server_address):
+        '''subscribe to a server's updates
+        
+        Parameters
+        server_address  -- a tuple containing the server's ip address and port
+        '''
+        s = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
+        s.connect(server_address)
+        request = {
+            'action' : 'SUBSCRIBE',
+            'ip_addr' : self.address[0],
+            'port' : self.address[1]
+        }
+        
+        s.sendall(bytes(json.dumps(request),'utf-8'))
+        #reply,addr = s.recvfrom(4096)
+        s.close()
+            
     def encode_operation(self):
+        ''' gets an operator from the operator history and encodes it into sendable form'''
         #attempt to get an operator only if the operators list is not empty
         if len(bpy.context.window_manager.operators) > 0:
             #get the last executed operator
@@ -160,6 +186,7 @@ class StartSession(bpy.types.Operator):
         
             
     def decode_operation(self):
+        '''gets an operation from a queue and calls the appropriate function '''
         print("decode")
         if not self.inqueue.empty():
             op = self.inqueue.get()

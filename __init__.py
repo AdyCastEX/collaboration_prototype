@@ -37,11 +37,13 @@ if "init_data" in locals():
     imp.reload(ui)
     imp.reload(encoder)
     imp.reload(decoder)
+    imp.reload(server)
 else:
     from . import operators
     from . import ui
     from . import encoder
     from . import decoder
+    from . import server
 
 #--- ### Register
 def register():
