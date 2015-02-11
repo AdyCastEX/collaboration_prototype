@@ -161,7 +161,7 @@ class StartSession(bpy.types.Operator):
         }
         
         s.sendall(bytes(json.dumps(request),'utf-8'))
-        #reply,addr = s.recvfrom(4096)
+        reply,addr = s.recvfrom(4096)
         s.close()
             
     def encode_operation(self):

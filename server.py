@@ -58,7 +58,13 @@ class StartServer(bpy.types.Operator):
         return {'PASS_THROUGH'}
     
     def init_server(self,port):
-        '''initialize a server '''
+        '''initialize a server 
+        
+        Parameters
+        port  -- the port number of the server
+        
+        '''
+        
         self.servsock = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
         host = socket.gethostname()
         temp_port = port
@@ -85,19 +91,21 @@ class StartServer(bpy.types.Operator):
             try:
                 print("Listening for requests...")
                 data, addr = self.servsock.recvfrom(4096)
+                #convert the bytes object into a dictionary object
                 data_json = json.loads(data.decode())
                 sender = (data_json['ip_addr'],data_json['port'])
                 action = data_json['action']
+                #add a new subscriber if not yet in the list 
                 if sender not in self.clients and action in ('LOGIN','SUBSCRIBE'):
-                    self.clients.append(sender)
-                    print(self.clients)
-                    ack = {'success':True}
-                    self.send_data(bytes(json.dumps(ack),'utf-8'), addr)
-                    
+                    t = threading.Thread(target=self.subscribe_thread,args=(sender,addr))
+                    t.start()
+                
+                #if the received data is a sent operation
                 if action in ('SEND'):
                     t = threading.Thread(target=self.client_thread,args=(data,sender))
                     t.start()
             except OSError:
+                #this can happen when the socket is suddenly closed while waiting for data
                 break
     
     
@@ -115,7 +123,22 @@ class StartServer(bpy.types.Operator):
                 continue
             
             self.send_data(data,client)
+            
+    def subscribe_thread(self,sender,addr):
+        '''add a node to the list of clients and return an acknowledgement of success
         
+        Parameters
+        sender  -- a tuple containing the ip address and port data of a node
+        addr    -- the address of the socket used to send a subscribe request
+        '''
+        
+        self.clients.append(sender)
+        print(self.clients)
+        ack = {
+            'success' : True
+        }
+        #convert the ack dict into a json string then encode as a bytes object before sending
+        self.servsock.sendto(bytes(json.dumps(ack),'utf-8'),addr)
         
     def send_data(self,data,receiver):
         '''send data to a specific receiver
