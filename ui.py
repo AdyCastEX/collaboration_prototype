@@ -15,3 +15,7 @@ class CollaborationPanel(bpy.types.Panel):
         row.operator("development.start_session")
         row = layout.row()
         row.operator("development.end_session")
+        row = layout.row()
+        row.operator("development.start_server")
+        row = layout.row()
+        row.operator("development.stop_server")
