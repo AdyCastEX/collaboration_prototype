@@ -29,6 +29,7 @@ bl_info = {
 
 #--- ### Imports
 import bpy
+import socket
 from bpy.utils import register_module,unregister_module
 
 if "init_data" in locals():
@@ -49,11 +50,15 @@ else:
 def register():
     '''registers all classes in this module'''
     register_module(__name__)
-    #a boolean value used to check if the listening thread is active
+    #a boolean property used to check if the listening thread is active
     bpy.types.Scene.thread_flag = bpy.props.BoolProperty(default=False)
-    #a boolean value used to check if the session operator is in modal mode
+    #a boolean property used to check if the session operator is in modal mode
     bpy.types.Scene.modal_flag = bpy.props.BoolProperty(default=False)
     bpy.types.Scene.active_obj_name = bpy.props.StringProperty()
+    #a string property that stores the ip address of the server. By default, it has the ip address of the host machine
+    bpy.types.Scene.server_ip_address = bpy.props.StringProperty(default=socket.gethostbyname(socket.gethostname()))
+    #an int property that stores the port of the server. By default it has the value 5050
+    bpy.types.Scene.server_port = bpy.props.IntProperty(default=5050)
 
 def unregister():
     '''unregisters all classes in this module'''
@@ -61,6 +66,8 @@ def unregister():
     del bpy.types.Scene.modal_flag
     del bpy.types.Scene.thread_flag
     del bpy.types.Scene.active_obj_name
+    del bpy.types.Scene.server_ip_address
+    del bpy.types.Scene.server_port
     
 #--- ### Main code
 if __name__ == '__main__':

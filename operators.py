@@ -66,7 +66,8 @@ class StartSession(bpy.types.Operator):
             #create start the thread for the listener
             listening_thread = threading.Thread(target=self.listener,args=())
             listening_thread.start()
-            self.subscribe(('192.168.56.1',5050))
+            #values of the server's ip addr and port are assigned via forms in the plugin's panel
+            self.subscribe((bpy.context.scene.server_ip_address,bpy.context.scene.server_port))
             
             wm = context.window_manager
             #add an event timer that triggers every n seconds
