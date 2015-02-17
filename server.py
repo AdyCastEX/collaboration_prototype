@@ -117,6 +117,7 @@ class StartServer(bpy.types.Operator):
         sender -- a tuple containing the ip address and port of the sender
         '''
         
+        print(data)
         for client in self.clients:
             #no need to send data to the node that sent the data
             if client == sender:
