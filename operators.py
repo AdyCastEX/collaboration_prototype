@@ -101,8 +101,7 @@ class StartSession(bpy.types.Operator):
         
         if event.type in ('TIMER'):
            self.decode_operation()
-        
-            
+           self.send_operation()
         return {'PASS_THROUGH'}
     
     def bind_listener(self,port):
@@ -179,8 +178,8 @@ class StartSession(bpy.types.Operator):
                 mode = bpy.context.mode
                 #execute the method to get an encoded operation
                 operation = encode_function(latest_op,active_object,mode)
-                if not self.inqueue.full():
-                    self.inqueue.put(operation)
+                if not self.outqueue.full():
+                    self.outqueue.put(operation)
                 print(operation)
             except AttributeError:
                 print("encode error")
@@ -193,6 +192,23 @@ class StartSession(bpy.types.Operator):
             op = self.inqueue.get()
             decode_function = getattr(self.dec,self.dec.format_op_name(op['name']))
             decode_function(op)
+            
+    def send_operation(self):
+        '''gets an operation from the outqueue and sends it to the server'''
+        if not self.outqueue.empty():
+            s = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
+            s.connect((bpy.context.scene.server_ip_address,bpy.context.scene.server_port))
+            op = self.outqueue.get()
+            
+            data = {
+                'action' : 'SEND',
+                'ip_addr' : self.address[0],
+                'port' : self.address[1],
+                'operation' : op        
+            }
+            
+            s.sendall(bytes(json.dumps(data),'utf-8'))
+            s.close()
         
             
 class EndSession(bpy.types.Operator):

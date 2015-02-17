@@ -59,6 +59,12 @@ def register():
     bpy.types.Scene.server_ip_address = bpy.props.StringProperty(default=socket.gethostbyname(socket.gethostname()))
     #an int property that stores the port of the server. By default it has the value 5050
     bpy.types.Scene.server_port = bpy.props.IntProperty(default=5050)
+    bpy.types.Scene.mode = bpy.props.EnumProperty(
+                                    items = (
+                                                    ("CLIENT","Client","Act as a collaborator"),
+                                                    ("SERVER","Server","Act as a collaboration server")
+                                                ),
+                                    default = "CLIENT")
 
 def unregister():
     '''unregisters all classes in this module'''
@@ -68,6 +74,7 @@ def unregister():
     del bpy.types.Scene.active_obj_name
     del bpy.types.Scene.server_ip_address
     del bpy.types.Scene.server_port
+    del bpy.types.Scene.mode
     
 #--- ### Main code
 if __name__ == '__main__':
