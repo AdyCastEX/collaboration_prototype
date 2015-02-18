@@ -3,6 +3,7 @@ import json
 import threading
 import queue
 import socket
+import time
 from . import encoder
 from . import decoder
 
@@ -49,6 +50,7 @@ class StartSession(bpy.types.Operator):
     sock     --  a socket object used to listen to the server
     address  --  a tuple containing the ip address and port of the socket listener
     dec      --  a decoder object used to decode and execute a received operation
+    last_op  --  a dict object representing the last encoded operation
     '''
     def invoke(self,context, event):
         
@@ -60,6 +62,7 @@ class StartSession(bpy.types.Operator):
             self.inqueue = queue.Queue(20)
             self.outqueue = queue.Queue(20)
             self.dec = decoder.Decoder()
+            self.last_op = {}
             
             #attempt bind the listener socket starting from the specified port 
             self.bind_listener(12345)
@@ -78,10 +81,6 @@ class StartSession(bpy.types.Operator):
         return {'RUNNING_MODAL'}
     
     def execute(self,context):
-        if bpy.context.active_object != None:
-            bpy.context.scene.active_obj_name = bpy.context.active_object.name 
-        self.encode_operation()
-        print(bpy.context.scene.active_obj_name)
         return {'FINISHED'}
     
     def modal(self,context,event):
@@ -94,14 +93,15 @@ class StartSession(bpy.types.Operator):
         
         #if the event matches any of the event types listed, call the execute method
         elif event.type in ('LEFTMOUSE','RIGHTMOUSE','ENTER'):
-            self.execute(context)
+            pass#self.call_encoder()
             
-        elif event.type in ('LEFTMOUSE','RIGHTMOUSE','ENTER') and event.value in ('CLICK'):
-            pass#self.execute(context)
-        
         if event.type in ('TIMER'):
+           encode_caller = threading.Thread(target=self.call_encoder())
+           encode_caller.start() 
+           op_sender = threading.Thread(target=self.send_operation,args=())
+           op_sender.start()
            self.decode_operation()
-           self.send_operation()
+           
         return {'PASS_THROUGH'}
     
     def bind_listener(self,port):
@@ -141,6 +141,12 @@ class StartSession(bpy.types.Operator):
             try:
                 print("Listening for requests...")
                 data,addr = self.sock.recvfrom(4096)
+                #add the received operation to the in queue if the queue still has space
+                if not self.inqueue.full():
+                    #convert the byte array (data) to a json string then to a dict
+                    data_json = json.loads(data.decode('utf-8'))
+                    #put the received operation in the in queue
+                    self.inqueue.put(data_json['operation'])
                 print(data)
             except OSError:
                 #a sample exception is when the socket is closed while waiting for data
@@ -170,20 +176,30 @@ class StartSession(bpy.types.Operator):
         if len(bpy.context.window_manager.operators) > 0:
             #get the last executed operator
             latest_op = bpy.context.window_manager.operators[-1]
-            try:
-                enc = encoder.Encoder()
-                #get the method that matches the name of the last operator
-                encode_function = getattr(enc,enc.format_op_name(latest_op.name))
-                active_object = bpy.context.active_object
-                mode = bpy.context.mode
-                #execute the method to get an encoded operation
-                operation = encode_function(latest_op,active_object,mode)
-                if not self.outqueue.full():
-                    self.outqueue.put(operation)
-                print(operation)
-            except AttributeError:
-                print("encode error")
+            
+            #check first if the opeation has not been encoded before to prevent unnecessary doubling
+            if latest_op != self.last_op:
+                #if the operation is different from the last one, update the last operation
+                self.last_op = latest_op
+                try:
+                    enc = encoder.Encoder()
+                    #get the method that matches the name of the last operator
+                    encode_function = getattr(enc,enc.format_op_name(latest_op.name))
+                    active_object = bpy.context.active_object
+                    mode = bpy.context.mode
+                    #execute the method to get an encoded operation
+                    operation = encode_function(latest_op,active_object,mode)
+                    if not self.outqueue.full():
+                        self.outqueue.put(operation)
+                    print(operation)
+                except AttributeError:
+                    print("encode error")
         
+    def call_encoder(self):
+        if bpy.context.active_object != None:
+            bpy.context.scene.active_obj_name = bpy.context.active_object.name 
+        self.encode_operation()
+        print(bpy.context.scene.active_obj_name)
             
     def decode_operation(self):
         '''gets an operation from a queue and calls the appropriate function '''
@@ -195,6 +211,7 @@ class StartSession(bpy.types.Operator):
             
     def send_operation(self):
         '''gets an operation from the outqueue and sends it to the server'''
+        #send an operation only if the out queue is not empty
         if not self.outqueue.empty():
             s = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
             s.connect((bpy.context.scene.server_ip_address,bpy.context.scene.server_port))
