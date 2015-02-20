@@ -17,14 +17,33 @@ class Decoder:
         return formatted_name
     
     def remove_focus(self,op):
+        '''moves the selection from the currently selected object to target object/s 
+        Parameters
+        
+        op -- a dict object containing the information of an operation
+        
+        '''
         current_selected = bpy.context.active_object
         current_selected.select = False
         bpy.data.objects[op['target']].select = True
         return current_selected.name
     
     def return_focus(self,op,previous_selected):
-        bpy.data.objects[op['target']].select = False
-        bpy.data.objects[previous_selected].select = True
+        '''moves the selection back to the previously selected objects 
+        Parameters
+        
+        op -- a dict object containing info of an operation
+        previous_selected -- a string containing the name of the previously selected object
+        
+        '''
+        
+        try:
+            #handle Key errors in cases like delete where previous objects are removed
+            bpy.data.objects[op['target']].select = False
+            bpy.data.objects[previous_selected].select = True
+        except KeyError:
+            pass
+        
     
     def translate(self,op):
         #obj = bpy.data.objects[op['target']]
@@ -58,21 +77,35 @@ class Decoder:
         self.return_focus(op, previous_selected)
     
     def resize(self,op):
-        obj = bpy.data.objects[op['target']]
-        if op['caxis_x'] == True:
-            obj.scale.x *= op['x']
-        if op['caxis_y'] == True:
-            obj.scale.y *= op['y']
-        if op['caxis_z'] == True:
-            obj.scale.z *= op['z']
-        if not self.check_constraint_axes(op):
-            obj.scale.x *= op['x']
-            obj.scale.y *= op['y']
-            obj.scale.z *= op['z']
+        #obj = bpy.data.objects[op['target']]
+        #if op['caxis_x'] == True:
+        #    obj.scale.x *= op['x']
+        #if op['caxis_y'] == True:
+        #    obj.scale.y *= op['y']
+        #if op['caxis_z'] == True:
+        #    obj.scale.z *= op['z']
+        #if not self.check_constraint_axes(op):
+        #    obj.scale.x *= op['x']
+        #    obj.scale.y *= op['y']
+        #    obj.scale.z *= op['z']
+        previous_selected = self.remove_focus(op)
+        
+        val = (op['x'],op['y'],op['z'])
+        c_axis = (bool(op['caxis_x']),bool(op['caxis_y']),bool(op['caxis_z']))
+        bpy.ops.transform.resize(value=val,constraint_axis=c_axis)
+        
+        self.return_focus(op, previous_selected)
         
     def add_cube(self,op):
         loc = (op['loc_x'],op['loc_y'],op['loc_z'])
         bpy.ops.mesh.primitive_cube_add(location=loc)
+        
+    def delete(self,op):
+        previous_selected = self.remove_focus(op)
+        
+        bpy.ops.object.delete(use_global=op['use_global'])
+        
+        self.return_focus(op, previous_selected)
         
     def check_constraint_axes(self,op):
         '''checks if an operation used a constraint axis'''
