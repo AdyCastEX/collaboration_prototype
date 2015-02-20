@@ -93,10 +93,10 @@ class StartSession(bpy.types.Operator):
         
         #if the event matches any of the event types listed, call the execute method
         elif event.type in ('LEFTMOUSE','RIGHTMOUSE','ENTER'):
-            pass#self.call_encoder()
+            pass
             
         if event.type in ('TIMER'):
-           encode_caller = threading.Thread(target=self.call_encoder())
+           encode_caller = threading.Thread(target=self.call_encoder(),args=())
            encode_caller.start() 
            op_sender = threading.Thread(target=self.send_operation,args=())
            op_sender.start()
