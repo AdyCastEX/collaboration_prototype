@@ -70,45 +70,45 @@ class Encoder:
     
     def add_cube(self,operator,target_object,mode):
         '''creates an operation with attributes specific to adding a primitive cube'''
-        op = self.add_generic_object(operator.name, target_object, mode)        
+        op = self.add_generic_object(operator, target_object, mode)        
         return op
     
     def add_circle(self,operator,target_object,mode):
         '''creates an operation with attributes specific to adding a primitive circle'''
-        op = self.add_generic_object(operator.name, target_object, mode)        
+        op = self.add_generic_object(operator, target_object, mode)        
         return op
     
     def add_plane(self,operator,target_object,mode):
         '''creates an operation with attributes specific to adding a primitive plane'''
-        op = self.add_generic_object(operator.name, target_object, mode)        
+        op = self.add_generic_object(operator, target_object, mode)        
         return op
     
     def add_uv_sphere(self,operator,target_object,mode):
         '''creates an operation with attributes specific to adding a primitive UV sphere'''
-        op = self.add_generic_object(operator.name, target_object, mode)        
+        op = self.add_generic_object(operator, target_object, mode)        
         return op
     
     def add_ico_sphere(self,operator,target_object,mode):
         '''creates an operation with attributes specific to a adding a primitive ico sphere'''
-        op = self.add_generic_object(operator.name, target_object, mode)        
+        op = self.add_generic_object(operator, target_object, mode)        
         return op
     
     def add_cylinder(self,operator,target_object,mode):
         '''creates an operation with attributes specific to adding a primitive cylinder'''
-        op = self.add_generic_object(operator.name, target_object, mode)        
+        op = self.add_generic_object(operator, target_object, mode)        
         return op
     
     def add_cone(self,operator,target_object,mode):
         '''creates an operation with attributes specific to adding a primitive cone'''
-        op = self.add_generic_object(operator.name, target_object, mode)        
+        op = self.add_generic_object(operator, target_object, mode)        
         return op
         
     def add_grid(self,operator,target_object,mode):
         '''creates an operation with attributes specific to adding a primitive grid'''
-        op = self.add_generic_object(operator.name, target_object, mode)        
+        op = self.add_generic_object(operator, target_object, mode)        
         return op
     
     def add_monkey(self,operator,target_object,mode):
         '''creates an operation with attributes specific to adding a primitive monkey object'''
-        op = self.add_generic_object(operator.name, target_object, mode)        
+        op = self.add_generic_object(operator, target_object, mode)        
         return op    
