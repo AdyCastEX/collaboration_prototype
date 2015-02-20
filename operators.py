@@ -91,7 +91,6 @@ class StartSession(bpy.types.Operator):
             bpy.context.scene.thread_flag = False
             return {'FINISHED'}
         
-        #if the event matches any of the event types listed, call the execute method
         elif event.type in ('LEFTMOUSE','RIGHTMOUSE','ENTER'):
             pass
             
