@@ -18,6 +18,8 @@ class StartServer(bpy.types.Operator):
     clients     -- a list containing the addresses of the clients
     address     -- a tuple containing the ip address and port of the server socket
     dec         -- a decoder object used to run operations
+    inqueue     -- a Queue object that stores received operations
+    outqueue    -- a Queue object that stores operations to send to clients
     '''
     
     def invoke(self,context, event):
@@ -31,6 +33,8 @@ class StartServer(bpy.types.Operator):
             #attribute initializations
             self.clients = []
             self.dec = decoder.Decoder()
+            self.inqueue = queue.Queue(30)
+            self.outqueue = queue.Queue(30)
             
             #initialize the server
             self.init_server(5050)
@@ -55,6 +59,9 @@ class StartServer(bpy.types.Operator):
         
         if event.type in ('TIMER'):
             print("timer")
+            self.process_operation()
+            self.broadcast_operation()
+            
         return {'PASS_THROUGH'}
     
     def init_server(self,port):
@@ -102,8 +109,9 @@ class StartServer(bpy.types.Operator):
                 
                 #if the received data is a sent operation
                 if action in ('SEND'):
-                    t = threading.Thread(target=self.client_thread,args=(data,sender))
-                    t.start()
+                    if not self.inqueue.full():
+                        self.inqueue.put(data_json)
+                    
             except OSError:
                 #this can happen when the socket is suddenly closed while waiting for data
                 break
@@ -154,6 +162,31 @@ class StartServer(bpy.types.Operator):
         s.sendto(data,receiver)
         s.close()
         
+    def process_operation(self):
+        if not self.inqueue.empty():
+            data = self.inqueue.get()
+            op = data['operation']
+            
+            #Operational Transformation goes here
+            
+            self.execute_operation(op)
+            data['operation'] = op
+            
+            if not self.outqueue.full():
+                self.outqueue.put(data)
+        
+    def execute_operation(self,op):
+        op_function = getattr(self.dec,self.dec.format_op_name(op['name']))
+        op_function(op)
+        
+    def broadcast_operation(self):
+        if not self.outqueue.empty():
+            data_json = self.outqueue.get()
+            sender = (data_json['ip_addr'],data_json['port'])
+            data = bytes(json.dumps(data_json),'utf-8')
+            t = threading.Thread(target=self.client_thread,args=(data,sender))
+            t.start()
+            
 class StopServer(bpy.types.Operator):
     '''stops a collaboration server '''
     bl_idname = "development.stop_server"
