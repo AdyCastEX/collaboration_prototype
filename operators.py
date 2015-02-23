@@ -64,14 +64,13 @@ class StartSession(bpy.types.Operator):
             self.dec = decoder.Decoder()
             self.last_op = {}
             
-            #attempt bind the listener socket starting from the specified port 
-            self.bind_listener(12345)
-            #create start the thread for the listener
+            #values of the server's ip addr and port are assigned via forms in the plugin's panel
+            self.address = self.subscribe((bpy.context.scene.server_ip_address,bpy.context.scene.server_port))
+            #bind the listener to the address received from the subscribe function
+            self.bind_listener(self.address)
+            #create and start the thread for the listener
             listening_thread = threading.Thread(target=self.listener,args=())
             listening_thread.start()
-            #values of the server's ip addr and port are assigned via forms in the plugin's panel
-            self.subscribe((bpy.context.scene.server_ip_address,bpy.context.scene.server_port))
-            
             wm = context.window_manager
             #add an event timer that triggers every n seconds
             self._timer = wm.event_timer_add(1.0,context.window)
@@ -103,28 +102,17 @@ class StartSession(bpy.types.Operator):
            
         return {'PASS_THROUGH'}
     
-    def bind_listener(self,port):
+    def bind_listener(self,address):
         ''' sets up a server listener
         
         Parameters
-        port -- the port number of the listener
+        address -- a tuple containing the ip address and port to bind to
         '''
         self.sock = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
-        #dynamically get the hostname of the machine
-        host = socket.gethostname()
-        temp_port = port
-        bind_success = False
-        #attempt to bind the socket to a specific port until a free port is found
-        while bind_success == False:
-            try:
-                self.sock.bind((host,temp_port))
-                bind_success = True
-            except OSError:
-                #if the port is taken, check the next one
-                temp_port += 1
-                
-        #set the address which is a tuple containing the ip address and port of the socket
-        self.address = self.sock.getsockname()
+        try:
+            self.sock.bind(address)
+        except OSError:
+            pass
         
     def unbind_listener(self):
         '''removes the server listener'''
@@ -139,14 +127,14 @@ class StartSession(bpy.types.Operator):
         while bpy.context.scene.thread_flag == True:
             try:
                 print("Listening for requests...")
-                data,addr = self.sock.recvfrom(4096)
+                data_bytes,addr = self.sock.recvfrom(4096)
                 #add the received operation to the in queue if the queue still has space
                 if not self.inqueue.full():
                     #convert the byte array (data) to a json string then to a dict
-                    data_json = json.loads(data.decode('utf-8'))
+                    data = json.loads(data_bytes.decode('utf-8'))
                     #put the received operation in the in queue
-                    self.inqueue.put(data_json['operation'])
-                print(data)
+                    self.inqueue.put(data['operation'])
+                print(data_bytes)
             except OSError:
                 #a sample exception is when the socket is closed while waiting for data
                 break
@@ -156,18 +144,24 @@ class StartSession(bpy.types.Operator):
         
         Parameters
         server_address  -- a tuple containing the server's ip address and port
+        
+        Return Value
+        client_address  -- an arbitrary ip address and port assigned by the server
         '''
         s = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
         s.connect(server_address)
         request = {
             'action' : 'SUBSCRIBE',
-            'ip_addr' : self.address[0],
-            'port' : self.address[1]
+            'ip_addr': '',
+            'port' : ''
         }
         
         s.sendall(bytes(json.dumps(request),'utf-8'))
-        reply,addr = s.recvfrom(4096)
+        reply_bytes,addr = s.recvfrom(4096)
         s.close()
+        reply = json.loads(reply_bytes.decode('utf-8'))
+        client_address = (reply['ip'],reply['port'])
+        return client_address
             
     def encode_operation(self):
         ''' gets an operator from the operator history and encodes it into sendable form'''

@@ -73,12 +73,13 @@ class StartServer(bpy.types.Operator):
         '''
         
         self.servsock = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
-        host = socket.gethostname()
+        #host = socket.gethostname()
         temp_port = port
         success_flag = False
         while success_flag == False:
             try:
-                self.servsock.bind((host,temp_port))
+                self.servsock.bind(('',temp_port))
+                print(temp_port)
                 success_flag = True
             except OSError:
                 temp_port+=1
@@ -97,24 +98,25 @@ class StartServer(bpy.types.Operator):
             
             try:
                 print("Listening for requests...")
-                data, addr = self.servsock.recvfrom(4096)
+                data_bytes, addr = self.servsock.recvfrom(4096)
                 #convert the bytes object into a dictionary object
-                data_json = json.loads(data.decode())
-                sender = (data_json['ip_addr'],data_json['port'])
-                action = data_json['action']
-                #add a new subscriber if not yet in the list 
-                if sender not in self.clients and action in ('LOGIN','SUBSCRIBE'):
-                    t = threading.Thread(target=self.subscribe_thread,args=(sender,addr))
+                data = json.loads(data_bytes.decode())
+                sender = (data['ip_addr'],data['port'])
+                action = data['action']
+                #add a new subscriber if not yet in the list of clients
+                if addr not in self.clients and action in ('LOGIN','SUBSCRIBE'):
+                    t = threading.Thread(target=self.subscribe_thread,args=('',addr))
                     t.start()
                 
-                #if the received data is a sent operation
-                if action in ('SEND'):
+                #accept data if it came from a node in the list of clients and that client intends to send data
+                elif sender in self.clients and action in ('SEND'):
                     if not self.inqueue.full():
-                        self.inqueue.put(data_json)
+                        self.inqueue.put(data)
                     
             except OSError:
                 #this can happen when the socket is suddenly closed while waiting for data
                 break
+            
     
     
     def client_thread(self,data,sender):
@@ -141,10 +143,12 @@ class StartServer(bpy.types.Operator):
         addr    -- the address of the socket used to send a subscribe request
         '''
         
-        self.clients.append(sender)
+        self.clients.append(addr)
         print(self.clients)
         ack = {
-            'success' : True
+            'success' : True,
+            'ip' : addr[0],
+            'port' : addr[1]
         }
         #convert the ack dict into a json string then encode as a bytes object before sending
         self.servsock.sendto(bytes(json.dumps(ack),'utf-8'),addr)
@@ -163,6 +167,7 @@ class StartServer(bpy.types.Operator):
         s.close()
         
     def process_operation(self):
+        '''performs the necessary processing of an operation on the server's instance of the collaborative session'''
         if not self.inqueue.empty():
             data = self.inqueue.get()
             op = data['operation']
@@ -176,10 +181,17 @@ class StartServer(bpy.types.Operator):
                 self.outqueue.put(data)
         
     def execute_operation(self,op):
+        ''' execute the operation on the server's instance of the collaborative session
+        
+        Parameters
+        op      -- the operation for execution, in dictionary format
+        
+        '''
         op_function = getattr(self.dec,self.dec.format_op_name(op['name']))
         op_function(op)
         
     def broadcast_operation(self):
+        '''gets an operation from the outqueue and starts a thread for sending data to connected clients'''
         if not self.outqueue.empty():
             data_json = self.outqueue.get()
             sender = (data_json['ip_addr'],data_json['port'])
