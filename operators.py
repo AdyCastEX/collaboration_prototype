@@ -89,6 +89,7 @@ class StartSession(bpy.types.Operator):
         
     def unbind_listener(self):
         '''removes the server listener'''
+        self.unsubscribe((bpy.context.scene.server_ip_address,bpy.context.scene.server_port))
         self.sock.close()
         #remove the timer to prevent redundancy when the listener is re-initialized
         bpy.context.window_manager.event_timer_remove(self._timer)
@@ -135,7 +136,26 @@ class StartSession(bpy.types.Operator):
         reply = json.loads(reply_bytes.decode('utf-8'))
         client_address = (reply['ip'],reply['port'])
         return client_address
-            
+    
+    def unsubscribe(self,server_address):
+        ''' unsubscribe from a server's updates
+        
+        Parameters
+        server_address -- a tuple containing the server's ip address and port
+        
+        '''
+        s = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
+        s.connect(server_address)
+        request = {
+            'action' : 'UNSUBSCRIBE',
+            'ip_addr' : self.address[0],
+            'port' : self.address[1]
+        }
+        
+        s.sendall(bytes(json.dumps(request),'utf-8'))
+        reply_bytes,addr = s.recvfrom(4096)
+        s.close()
+        
     def encode_operation(self):
         ''' gets an operator from the operator history and encodes it into sendable form'''
         #attempt to get an operator only if the operators list is not empty
