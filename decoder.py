@@ -18,29 +18,46 @@ class Decoder:
     
     def remove_focus(self,op):
         '''moves the selection from the currently selected object to target object/s 
-        Parameters
         
+        Parameters
         op -- a dict object containing the information of an operation
         
+        Return Type
+        selected_names    -- a list containing the names of the currently selected objects
         '''
-        current_selected = bpy.context.active_object
-        current_selected.select = False
-        bpy.data.objects[op['target']].select = True
-        return current_selected.name
+        selected_names = []
+        current_selected = bpy.context.selected_objects
+        for obj in current_selected:
+            obj.select = False
+            selected_names.append(obj.name)
+            
+        for target in op['targets']:
+            try:
+                bpy.data.objects[target].select = True
+            except KeyError:
+                pass
+        
+        return selected_names
     
     def return_focus(self,op,previous_selected):
-        '''moves the selection back to the previously selected objects 
+        '''moves the selection back to the previously selected object/s 
         Parameters
         
         op -- a dict object containing info of an operation
-        previous_selected -- a string containing the name of the previously selected object
+        previous_selected -- a string containing the name/s of the previously selected object/s
         
         '''
         
         try:
             #handle Key errors in cases like delete where previous objects are removed
-            bpy.data.objects[op['target']].select = False
-            bpy.data.objects[previous_selected].select = True
+            for target in op['targets']:
+                bpy.data.objects[target].select = False
+        except KeyError:
+            pass
+        
+        try:        
+            for obj in previous_selected:
+                bpy.data.objects[obj].select = True
         except KeyError:
             pass
         
@@ -97,8 +114,13 @@ class Decoder:
         self.return_focus(op, previous_selected)
         
     def add_cube(self,op):
+        
+        previous_selected = self.remove_focus(op)
+        
         loc = (op['loc_x'],op['loc_y'],op['loc_z'])
         bpy.ops.mesh.primitive_cube_add(location=loc)
+        
+        self.return_focus(op, previous_selected)
         
     def delete(self,op):
         previous_selected = self.remove_focus(op)

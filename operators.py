@@ -6,35 +6,6 @@ import socket
 import time
 from . import encoder
 from . import decoder
-
-class EncodeOperation(bpy.types.Operator):
-    '''gets the last executed operator and encodes it for sending'''
-    bl_idname = "development.encode_operation"
-    bl_label = "Encode Opeation"
-    bl_description = "Gets the last executed operator and encodes it for sending"
-    
-    def invoke(self,context,event):
-        return self.execute(context)
-    
-    def execute(self,context):
-        
-        #attempt to get an operator only if the operators list is not empty
-        if len(bpy.context.window_manager.operators) > 0:
-            #get the last executed operator
-            latest_op = bpy.context.window_manager.operators[-1]
-            try:
-                enc = encoder.Encoder()
-                #get the method that matches the name of the last operator
-                encode_function = getattr(enc,enc.format_op_name(latest_op.name))
-                active_object = bpy.context.active_object
-                mode = bpy.context.mode
-                #execute the method to get an encoded operation
-                operation = encode_function(latest_op,active_object,mode)
-                print(operation)
-            except AttributeError:
-                print("encode error")
-        return {'FINISHED'}
-        
     
 class StartSession(bpy.types.Operator):
     ''' initiates a persistent collaborative session ''' 
@@ -50,6 +21,7 @@ class StartSession(bpy.types.Operator):
     sock     --  a socket object used to listen to the server
     address  --  a tuple containing the ip address and port of the socket listener
     dec      --  a decoder object used to decode and execute a received operation
+    enc      --  an encoder object used to encode an operation 
     last_op  --  a dict object representing the last encoded operation
     '''
     def invoke(self,context, event):
@@ -62,6 +34,7 @@ class StartSession(bpy.types.Operator):
             self.inqueue = queue.Queue(20)
             self.outqueue = queue.Queue(20)
             self.dec = decoder.Decoder()
+            self.enc = encoder.Encoder()
             self.last_op = {}
             
             #values of the server's ip addr and port are assigned via forms in the plugin's panel
@@ -175,13 +148,12 @@ class StartSession(bpy.types.Operator):
                 #if the operation is different from the last one, update the last operation
                 self.last_op = latest_op
                 try:
-                    enc = encoder.Encoder()
                     #get the method that matches the name of the last operator
-                    encode_function = getattr(enc,enc.format_op_name(latest_op.name))
-                    active_object = bpy.context.active_object
+                    encode_function = getattr(self.enc,self.enc.format_op_name(latest_op.name))
+                    selected_objects = self.enc.get_obj_names(bpy.context.selected_objects)
                     mode = bpy.context.mode
                     #execute the method to get an encoded operation
-                    operation = encode_function(latest_op,active_object,mode)
+                    operation = encode_function(latest_op,selected_objects,mode)
                     if not self.outqueue.full():
                         self.outqueue.put(operation)
                     print(operation)
@@ -189,8 +161,9 @@ class StartSession(bpy.types.Operator):
                     print("encode error")
         
     def call_encoder(self):
-        if bpy.context.active_object != None:
-            bpy.context.scene.active_obj_name = bpy.context.active_object.name 
+        if bpy.context.selected_objects != []:
+            selected_objects = self.enc.get_obj_names(bpy.context.selected_objects)
+            bpy.context.scene.active_obj_name = json.dumps(selected_objects) 
         self.encode_operation()
         print(bpy.context.scene.active_obj_name)
             
