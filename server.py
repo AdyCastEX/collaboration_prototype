@@ -112,6 +112,10 @@ class StartServer(bpy.types.Operator):
                 elif sender in self.clients and action in ('SEND'):
                     if not self.inqueue.full():
                         self.inqueue.put(data)
+                        
+                elif sender in self.clients and action in ('LOGOUT','UNSUBSCRIBE'):
+                    t = threading.Thread(target=self.unsubscribe_thread,args=(sender,addr))
+                    t.start()
                     
             except OSError:
                 #this can happen when the socket is suddenly closed while waiting for data
@@ -151,6 +155,21 @@ class StartServer(bpy.types.Operator):
             'port' : addr[1]
         }
         #convert the ack dict into a json string then encode as a bytes object before sending
+        self.servsock.sendto(bytes(json.dumps(ack),'utf-8'),addr)
+        
+    def unsubscribe_thread(self,sender,addr):
+        '''remove a node from the list of clients
+        
+        sender  -- a tuple containing the ip address and port data of a node
+        addr    -- a tuple containing the ip address and port data of the socket that sent the request
+        '''
+        
+        self.clients.remove(sender)
+        print(self.clients)
+        ack = {
+            'success' : True
+        }
+        
         self.servsock.sendto(bytes(json.dumps(ack),'utf-8'),addr)
         
     def send_data(self,data,receiver):

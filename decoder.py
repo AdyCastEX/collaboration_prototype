@@ -8,6 +8,9 @@ class Decoder:
         Parameters:
         op_name -- the name of the operator from the info space
         
+        Return Value
+        formatted_name -- the properly formatted name of the operator
+        
         '''
         #convert the op name to lowercase
         formatted_name = op_name.lower()
@@ -23,7 +26,7 @@ class Decoder:
         op -- a dict object containing the information of an operation
         
         Return Type
-        selected_names    -- a list containing the names of the currently selected objects
+        selected_names    -- a list containing the names of the objects that were selected before shifting focus
         '''
         selected_names = []
         current_selected = bpy.context.selected_objects
