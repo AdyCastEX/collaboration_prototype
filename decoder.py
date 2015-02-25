@@ -26,23 +26,35 @@ class Decoder:
         op -- a dict object containing the information of an operation
         
         Return Type
-        selected_names    -- a list containing the names of the objects that were selected before shifting focus
+        focus             -- a dict containing the following:
+           selected       -- a list containing the names of the objects that were selected before shifting focus
+           active         -- a string containing the name of the active object
         '''
-        selected_names = []
-        current_selected = bpy.context.selected_objects
-        for obj in current_selected:
+        current_selected = []
+        for obj in bpy.context.selected_objects:
             obj.select = False
-            selected_names.append(obj.name)
+            current_selected.append(obj.name)
+        current_active = bpy.context.active_object
             
         for target in op['targets']:
             try:
                 bpy.data.objects[target].select = True
             except KeyError:
                 pass
+            
+        try:
+            bpy.context.scene.objects.active = bpy.data.objects[op['active_object']]
+        except KeyError:
+            pass
+            
+        focus = {
+            'selected' : current_selected,
+            'active' : current_active
+        }
         
-        return selected_names
+        return focus
     
-    def return_focus(self,op,previous_selected):
+    def return_focus(self,op,focus):
         '''moves the selection back to the previously selected object/s 
         Parameters
         
@@ -59,8 +71,13 @@ class Decoder:
             pass
         
         try:        
-            for obj in previous_selected:
+            for obj in focus['selected']:
                 bpy.data.objects[obj].select = True
+        except KeyError:
+            pass
+        
+        try:
+            bpy.context.scene.objects.active = focus['active']
         except KeyError:
             pass
         
@@ -122,6 +139,79 @@ class Decoder:
         
         loc = (op['loc_x'],op['loc_y'],op['loc_z'])
         bpy.ops.mesh.primitive_cube_add(location=loc)
+        
+        self.return_focus(op, previous_selected)
+        
+    def add_circle(self,op):
+        
+        previous_selected = self.remove_focus(op)
+        
+        loc = (op['loc_x'],op['loc_y'],op['loc_z'])
+        bpy.ops.mesh.primitive_circle_add(location=loc)
+        
+        self.return_focus(op, previous_selected)
+    
+    def add_plane(self,op):
+        previous_selected = self.remove_focus(op)
+        
+        loc = (op['loc_x'],op['loc_y'],op['loc_z'])
+        bpy.ops.mesh.primitive_plane_add(location=loc)
+        
+        self.return_focus(op, previous_selected)
+    
+    def add_uv_sphere(self,op):
+        previous_selected = self.remove_focus(op)
+        
+        loc = (op['loc_x'],op['loc_y'],op['loc_z'])
+        bpy.ops.mesh.primitive_uv_sphere_add(location=loc)
+        
+        self.return_focus(op, previous_selected)
+    
+    def add_ico_sphere(self,op):
+        previous_selected = self.remove_focus(op)
+        
+        loc = (op['loc_x'],op['loc_y'],op['loc_z'])
+        bpy.ops.mesh.primitive_ico_sphere_add(location=loc)
+        
+        self.return_focus(op, previous_selected)
+    
+    def add_cylinder(self,op):
+        previous_selected = self.remove_focus(op)
+        
+        loc = (op['loc_x'],op['loc_y'],op['loc_z'])
+        bpy.ops.mesh.primitive_cylinder_add(location=loc)
+        
+        self.return_focus(op, previous_selected)
+    
+    def add_cone(self,op):
+        previous_selected = self.remove_focus(op)
+        
+        loc = (op['loc_x'],op['loc_y'],op['loc_z'])
+        bpy.ops.mesh.primitive_cone_add(location=loc)
+        
+        self.return_focus(op, previous_selected)
+    
+    def add_grid(self,op):
+        previous_selected = self.remove_focus(op)
+        
+        loc = (op['loc_x'],op['loc_y'],op['loc_z'])
+        bpy.ops.mesh.primitive_grid_add(location=loc)
+        
+        self.return_focus(op, previous_selected)
+
+    def add_monkey(self,op):
+        previous_selected = self.remove_focus(op)
+        
+        loc = (op['loc_x'],op['loc_y'],op['loc_z'])
+        bpy.ops.mesh.primitive_monkey_add(location=loc)
+        
+        self.return_focus(op, previous_selected)
+        
+    def add_torus(self,op):
+        previous_selected = self.remove_focus(op)
+        
+        loc = (op['loc_x'],op['loc_y'],op['loc_z'])
+        bpy.ops.mesh.primitive_torus_add(location=loc)
         
         self.return_focus(op, previous_selected)
         
