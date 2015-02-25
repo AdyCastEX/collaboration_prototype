@@ -161,7 +161,8 @@ class StartSession(bpy.types.Operator):
         #attempt to get an operator only if the operators list is not empty
         if len(bpy.context.window_manager.operators) > 0:
             #get the last executed operator
-            latest_op = bpy.context.window_manager.operators[-1]
+            latest_op = bpy.context.active_operator
+            #latest_op = bpy.context.window_manager.operators[-1]
             
             #check first if the opeation has not been encoded before to prevent unnecessary doubling
             if latest_op != self.last_op:
@@ -171,9 +172,13 @@ class StartSession(bpy.types.Operator):
                     #get the method that matches the name of the last operator
                     encode_function = getattr(self.enc,self.enc.format_op_name(latest_op.name))
                     selected_objects = self.enc.get_obj_names(bpy.context.selected_objects)
+                    if bpy.context.active_object != None:
+                        active_object = bpy.context.active_object.name
+                    else:
+                        active_object = ''
                     mode = bpy.context.mode
                     #execute the method to get an encoded operation
-                    operation = encode_function(latest_op,selected_objects,mode)
+                    operation = encode_function(latest_op,selected_objects,active_object,mode)
                     if not self.outqueue.full():
                         self.outqueue.put(operation)
                     print(operation)
