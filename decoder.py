@@ -36,21 +36,8 @@ class Decoder:
             
         return obj_names
     
-    def focus_object(self,op):
-        ''' moves the selection to a collection of objects
-        
-        Parameters
-        op    --a dict object representing an operation
-        
-        '''
-        for target in op['targets']:
-            try:
-                bpy.data.objects[target].select = True
-            except KeyError:
-                pass
-            
     def refocus_object_mode(self,target_objects,flag):
-        '''moves the selection to a collection of objects
+        '''moves the selection to a collection of objects, in object mode
         
         Parameters
         target_objects      -- a list of names of target objects
@@ -75,12 +62,25 @@ class Decoder:
         return deselected_objects
     
     def refocus_edit_mode(self,active_object,internals,flag):
+        '''moves the selection to a collection of internals (e.g vertices, edges, faces), in edit mode
+        
+        Parameters
+        active_object     -- a string containing the name of the active object
+        internals         -- a dictionary object containing the following:
+            verts         -- a list containing the indices of vertices
+            edges         -- a list containing the indices of edges
+            faces         -- a list containing the indices of faces
+        flag              -- a boolean value indicating the operation
+                          -- True -> select internals
+                          -- False -> deselect internals    
+        '''
         
         deselected_internals = {}
         deselected_verts = []
         deselected_edges = []
         deselected_faces = []
         
+        #create a bmesh to store the edit mode data of the object
         bm = bmesh.from_edit_mesh(bpy.data.objects[active_object].data)
         for i in internals['verts']:
             bm.verts[i].select = flag
@@ -104,25 +104,6 @@ class Decoder:
         elif flag == True:
             return {}
             
-    def focus_edit(self,op):
-        '''moves the selection to a collection of vertices,edges and faces
-        
-        Parameters
-        op     --a dict object representing an operation
-        
-        ''' 
-        bm = bmesh.from_edit_mesh(bpy.data.objects[op['active_object']].data)
-        for i in op['verts']:
-            bm.verts[i].select = True
-            
-        for i in op['edges']:
-            bm.edges[i].select = True
-            
-        for i in op['faces']:
-            bm.faces[i].select = True
-        
-        
-    
     def remove_focus(self,op):
         '''moves the selection from the currently selected object to target object/s 
         
@@ -134,24 +115,25 @@ class Decoder:
            selected       -- a list containing the names of the objects that were selected before shifting focus
            active         -- a string containing the name of the active object
            mode           -- a string containing the current mode ('EDIT_MESH','OBJECT')
+           internals      -- a dictionary object containing lists of indices of selected vertices, edges and faces
         '''
-        #current_selected = []
-        #for obj in bpy.context.selected_objects:
-        #    obj.select = False
-        #    current_selected.append(obj.name)
+        
         current_active = bpy.context.active_object.name
         current_mode = bpy.context.mode
         current_selected = ''
         current_internals = ''
         
+        #deselect objects if in object mode
         if current_mode in ('OBJECT'):
             selected_objs = self.get_obj_names(bpy.context.selected_objects)
             current_selected = self.refocus_object_mode(selected_objs,False)
             
+        #deselect internals if in edit mode
         elif current_mode in ('EDIT_MESH'):
             selected_internals = self.get_internals(current_active)
             current_internals = self.refocus_edit_mode(current_active,selected_internals,False)
         
+        #if the mode of the received operation is different from the current mode, shift the mode
         if op['mode'] != current_mode:
             print("From: {0}".format(bpy.context.mode))
             bpy.ops.object.editmode_toggle()
@@ -159,23 +141,27 @@ class Decoder:
             
             new_mode = bpy.context.mode
             
+            #from EDIT_MESH to OBJECT - deselect currently selected objects as well
             if new_mode in ('OBJECT'):
                 selected_objs = self.get_obj_names(bpy.context.selected_objects)
                 current_selected = self.refocus_object_mode(selected_objs,False)
                 
+            #from OBJECT to EDIT_MESH - deselect currently selected internals as well
             elif new_mode in ('EDIT_MESH'):
                 selected_internals = self.get_internals(current_active)
                 current_internals = self.refocus_edit_mode(current_active,selected_internals,False)
             
-        
+        #if the mode of the received operation is OBJECT, move the selection of objects selected in the operation
         if op['mode'] in ('OBJECT'):
             self.refocus_object_mode(op['targets'], True)
                  
+        #if the mode of the received operation is EDIT_MESH, move the selection 
         elif op['mode'] in ('EDIT_MESH'):
             internals = {'verts': op['verts'], 'edges' : op['edges'], 'faces' : op['faces']}
-            self.refocus_edit_mode(op['active_object'], internals,True)
+            self.refocus_edit_mode(op['active_object'],internals,True)
             
         try:
+            #shift the active object to the active object in the received operation
             bpy.context.scene.objects.active = bpy.data.objects[op['active_object']]
         except KeyError:
             pass
@@ -193,49 +179,75 @@ class Decoder:
         '''moves the selection back to the previously selected object/s 
         Parameters
         
-        op -- a dict object containing info of an operation
-        previous_selected -- a string containing the name/s of the previously selected object/s
+        op      -- a dict object containing info of an operation
+        focus         -- a dictionary object containing the following:
+            selected  -- a list containing the names of selected objects
+            active    -- a string containing the name of the active object
+            mode      -- a string containing the mode ('OBJECT','EDIT_MESH')
+            internals -- a dictionary object containing the indices of selected vertices, edges and faces 
         
         '''
         current_mode = bpy.context.mode
         
         try:
-            #handle Key errors in cases like delete where previous objects are removed
+            #if the operation was for OBJECT mode, deselect the objects that were selected for the received operation
             if op['mode'] in ('OBJECT'):
                 self.refocus_object_mode(op['targets'], False)
+            #if the operation was for EDIT_MESH mode, deselect the internals that were selected for the received operation
             elif op['mode'] in ('EDIT_MESH'):
                 internals = {'verts' : op['verts'],'edges' : op['edges'],'faces' : op['faces']}
                 self.refocus_edit_mode(op['active_object'], internals,False)
         except KeyError:
+            #handle Key errors in cases like delete where previous objects are removed
             pass
         
         if current_mode != focus['mode']:
             
+            #if currently in object mode, reselect all objects that were previously selected
             if current_mode in ('OBJECT'):
                 self.refocus_object_mode(focus['selected'],True)
             
+            #if currently in edit mode, reselect all the internals that were previously selected
             elif current_mode in ('EDIT_MESH'):
                 self.refocus_edit_mode(focus['active'], focus['internals'], True)
             
+            #change the mode back to what it was before shifting focus
             print("From: {0}".format(bpy.context.mode))
             bpy.ops.object.editmode_toggle()
             print("To: {0}".format(bpy.context.mode))
         
         try:        
+            #if the focus was in object mode, reselect all objects in the focus 
             if focus['mode'] in ('OBJECT'):
                 self.refocus_object_mode(focus['selected'], True)
+            #if the focus was in edit mode, reselect all the internals in the focus
             elif focus['mode'] in ('EDIT_MESH'):
                 self.refocus_edit_mode(focus['active'], focus['internals'],True)
         except KeyError:
             pass
         
         try:
+            #return the active object to the object that was previously active
             bpy.context.scene.objects.active = bpy.data.objects[focus['active']]
         except KeyError:
             pass
         
         
     def get_internals(self,active_object):
+        '''gets the set of selected vertices, edges and faces
+        
+        Parameters
+        active_object     -- a string containing the name of the object that contains the internals
+        
+        Return Value
+        internals         -- a dictionary object that contains the following:
+            verts         -- a list containing the indices of selected vertices
+            edges         -- a list containing the indices of selected edges
+            faces         -- a list containing the indices of selected faces
+        
+        '''
+        
+        #create a bmesh object to access the internals of the object
         bm = bmesh.from_edit_mesh(bpy.data.objects[active_object].data)
         
         verts = [i.index for i in bm.verts if i.select]
@@ -252,10 +264,6 @@ class Decoder:
         
     
     def translate(self,op):
-        #obj = bpy.data.objects[op['target']]
-        #obj.location.x += op['x']
-        #obj.location.y += op['y']
-        #obj.location.z += op['z']
         
         previous_selected = self.remove_focus(op)
         
@@ -267,11 +275,6 @@ class Decoder:
         self.return_focus(op,previous_selected)
         
     def rotate(self,op):
-        #obj = bpy.data.objects[op['target']]
-        #value = op['value']
-        #obj.rotation_euler.x += (value * op['axis_x'])
-        #obj.rotation_euler.y += (value * op['axis_y'])
-        #obj.rotation_euler.z += (value * op['axis_z'])
         
         previous_selected = self.remove_focus(op)
         
@@ -283,17 +286,7 @@ class Decoder:
         self.return_focus(op, previous_selected)
     
     def resize(self,op):
-        #obj = bpy.data.objects[op['target']]
-        #if op['caxis_x'] == True:
-        #    obj.scale.x *= op['x']
-        #if op['caxis_y'] == True:
-        #    obj.scale.y *= op['y']
-        #if op['caxis_z'] == True:
-        #    obj.scale.z *= op['z']
-        #if not self.check_constraint_axes(op):
-        #    obj.scale.x *= op['x']
-        #    obj.scale.y *= op['y']
-        #    obj.scale.z *= op['z']
+        
         previous_selected = self.remove_focus(op)
         
         val = (op['x'],op['y'],op['z'])
@@ -390,12 +383,4 @@ class Decoder:
         bpy.ops.object.delete(use_global=op['use_global'])
         
         self.return_focus(op, previous_selected)
-        
-    def check_constraint_axes(self,op):
-        '''checks if an operation used a constraint axis'''
-        if op['caxis_x'] == False and op['caxis_y'] == False and op['caxis_z'] == False:
-            return False
-        
-        else:
-            return True
         

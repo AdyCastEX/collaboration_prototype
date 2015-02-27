@@ -7,9 +7,17 @@ class Encoder:
         ''' creates a generic encoded operation 
         
         Parameters:
-        op_name -- name of the operator
-        target_objects -- a list of objects that are involved in the operation
-        mode -- the mode (e.g. object, edit) when the operator was called
+        op_name        -- name of the operator
+        target_objects -- a dictionary object containing the following:
+            objects    -- a list of object names
+            verts      -- a list of indices of selected vertices
+            edges      -- a list of indices of selected edges
+            faces      -- a list of indices of selected faces
+        active_object  -- a string containing the name of the active object
+        mode           -- the mode (e.g. 'OBJECT', 'EDIT_MESH') when the operator was called
+        
+        Return Value
+        op             -- a dictionary representing an operation
         
         '''
         op = {}
@@ -28,7 +36,10 @@ class Encoder:
         '''converts an operator name to a format that follows method naming conventions
         
         Parameters:
-        op_name -- the name of the operator from the info space
+        op_name        -- the name of the operator from the info space
+        
+        Return Value
+        formatted_name -- the properly formatted name of the operator
         
         '''
         #convert the op name to lowercase
