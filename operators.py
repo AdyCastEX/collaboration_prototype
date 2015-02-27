@@ -4,6 +4,7 @@ import threading
 import queue
 import socket
 import time
+import bmesh
 from . import encoder
 from . import decoder
     
@@ -171,30 +172,38 @@ class StartSession(bpy.types.Operator):
                 try:
                     #get the method that matches the name of the last operator
                     encode_function = getattr(self.enc,self.enc.format_op_name(latest_op.name))
-                    selected_objects = self.enc.get_obj_names(bpy.context.selected_objects)
+                    mode = bpy.context.mode
+                    selected = {
+                        'objects' : self.enc.get_obj_names(bpy.context.selected_objects)
+                    }
                     if bpy.context.active_object != None:
                         active_object = bpy.context.active_object.name
+                        if mode in ('EDIT_MESH'):
+                            internals = self.get_internals(bpy.context.active_object)
+                            selected['verts'] = internals['verts']
+                            selected['edges'] = internals['edges']
+                            selected['faces'] = internals['faces']
                     else:
                         active_object = ''
-                    mode = bpy.context.mode
+                    
                     #execute the method to get an encoded operation
-                    operation = encode_function(latest_op,selected_objects,active_object,mode)
+                    operation = encode_function(latest_op,selected,active_object,mode)
                     if not self.outqueue.full():
                         self.outqueue.put(operation)
                     print(operation)
                 except AttributeError:
-                    print("encode error")
+                    print("operation not supported")
         
     def call_encoder(self):
         if bpy.context.selected_objects != []:
             selected_objects = self.enc.get_obj_names(bpy.context.selected_objects)
             bpy.context.scene.active_obj_name = json.dumps(selected_objects) 
         self.encode_operation()
-        print(bpy.context.scene.active_obj_name)
+        #print(bpy.context.scene.active_obj_name)
             
     def decode_operation(self):
         '''gets an operation from a queue and calls the appropriate function '''
-        print("decode")
+        #print("decode")
         if not self.inqueue.empty():
             op = self.inqueue.get()
             decode_function = getattr(self.dec,self.dec.format_op_name(op['name']))
@@ -218,6 +227,21 @@ class StartSession(bpy.types.Operator):
             s.sendall(bytes(json.dumps(data),'utf-8'))
             s.close()
         
+    def get_internals(self,active_object):
+        bm = bmesh.from_edit_mesh(active_object.data)
+        
+        verts = [i.index for i in bm.verts if i.select]
+        edges = [i.index for i in bm.edges if i.select]
+        faces = [i.index for i in bm.faces if i.select]
+        
+        internals = {
+            'verts' : verts,
+            'edges' : edges,
+            'faces' : faces
+        }
+        
+        return internals
+            
             
 class EndSession(bpy.types.Operator):
     ''' ends a persistent collaborative session '''

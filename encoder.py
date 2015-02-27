@@ -14,9 +14,14 @@ class Encoder:
         '''
         op = {}
         op['name'] = op_name
-        op['targets'] = target_objects
+        op['targets'] = target_objects['objects']
         op['active_object'] = active_object
         op['mode'] = mode
+        
+        if mode in ('EDIT_MESH'):
+            op['verts'] = target_objects['verts']
+            op['edges'] = target_objects['edges']
+            op['faces'] = target_objects['faces']
         return op
     
     def format_op_name(self,op_name):
