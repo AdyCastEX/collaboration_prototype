@@ -121,7 +121,7 @@ class StartSession(bpy.types.Operator):
         server_address  -- a tuple containing the server's ip address and port
         
         Return Value
-        client_address  -- an arbitrary ip address and port assigned by the server
+        client_address  -- a tuple containing an arbitrary ip address and port assigned by the server
         '''
         s = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
         s.connect(server_address)
@@ -228,6 +228,18 @@ class StartSession(bpy.types.Operator):
             s.close()
         
     def get_internals(self,active_object):
+        '''gets the set of selected vertices, edges and faces
+        
+        Parameters
+        active_object     -- a string containing the name of the object that contains the internals
+        
+        Return Value
+        internals         -- a dictionary object that contains the following:
+            verts         -- a list containing the indices of selected vertices
+            edges         -- a list containing the indices of selected edges
+            faces         -- a list containing the indices of selected faces
+        
+        '''
         bm = bmesh.from_edit_mesh(active_object.data)
         
         verts = [i.index for i in bm.verts if i.select]
@@ -256,14 +268,3 @@ class EndSession(bpy.types.Operator):
         bpy.context.scene.modal_flag = False
         return {'FINISHED'}
         
-class SendOperation(bpy.types.Operator):
-    '''sends an operation to a server'''
-    bl_idname = "development.send_operation"
-    bl_label = "Send Operation"
-    bl_description = "Sends an operation to a server"
-    
-    def invoke(self,context, event):
-        return self.execute(context)
-    
-    def execute(self,context):
-        return {'FINISHED'}
