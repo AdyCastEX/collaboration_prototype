@@ -58,7 +58,7 @@ class StartServer(bpy.types.Operator):
             return {'FINISHED'}
         
         if event.type in ('TIMER'):
-            print("timer")
+            #print("timer")
             self.process_operation()
             self.broadcast_operation()
             
