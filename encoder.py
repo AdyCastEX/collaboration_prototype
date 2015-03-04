@@ -90,12 +90,22 @@ class Encoder:
         
     def delete(self,operator,target_objects,active_object,mode):
         '''creates an operation with attributes specific to a delete'''
-        if target_objects == []:
-            selected_objects = json.loads(bpy.context.scene.active_obj_name)
+        if target_objects == {}:
+            selected_objects = {}
+            selected_objects['objects'] = json.loads(bpy.context.scene.active_obj_name)
+            if mode in ('EDIT_MESH'):
+                internals = json.loads(bpy.context.scene.selected_internals)
+                selected_objects['verts'] = internals['verts']
+                selected_objects['edges'] = internals['edges']
+                selected_objects['faces'] = internals['faces']
             op = self.create_generic_operation(operator.name, selected_objects,active_object, mode)
         else:
             op = self.create_generic_operation(operator.name, target_objects,active_object, mode)
-        op['use_global'] = operator.properties['use_global']
+            
+        if mode in ('OBJECT'):
+            op['use_global'] = operator.properties['use_global']
+        elif mode in ('EDIT_MESH'):
+            op['type'] = operator.type
         return op
     
     def add_generic_object(self,operator,target_objects,active_object,mode):

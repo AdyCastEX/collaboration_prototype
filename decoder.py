@@ -380,7 +380,10 @@ class Decoder:
     def delete(self,op):
         previous_selected = self.remove_focus(op)
         
-        bpy.ops.object.delete(use_global=op['use_global'])
+        if op['mode'] in ('OBJECT'):
+            bpy.ops.object.delete(use_global=op['use_global'])
+        elif op['mode'] in ('EDIT_MESH'):
+            bpy.ops.mesh.delete(type=op['type'])
         
         self.return_focus(op, previous_selected)
         
