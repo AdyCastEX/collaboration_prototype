@@ -34,13 +34,13 @@ from bpy.utils import register_module,unregister_module
 
 if "init_data" in locals():
     import imp
-    imp.reload(operators)
+    imp.reload(client)
     imp.reload(ui)
     imp.reload(encoder)
     imp.reload(decoder)
     imp.reload(server)
 else:
-    from . import operators
+    from . import client
     from . import ui
     from . import encoder
     from . import decoder
@@ -56,7 +56,7 @@ def register():
     bpy.types.Scene.modal_flag = bpy.props.BoolProperty(default=False)
     bpy.types.Scene.active_obj_name = bpy.props.StringProperty()
     #a string property that stores the ip address of the server. By default, it has the ip address of the host machine
-    bpy.types.Scene.server_ip_address = bpy.props.StringProperty(default=socket.gethostbyname(socket.gethostname()))
+    bpy.types.Scene.server_ip_address = bpy.props.StringProperty(default=socket.gethostbyname('localhost'))
     #an int property that stores the port of the server. By default it has the value 5050
     bpy.types.Scene.server_port = bpy.props.IntProperty(default=5050)
     bpy.types.Scene.mode = bpy.props.EnumProperty(
@@ -65,6 +65,7 @@ def register():
                                                     ("SERVER","Server","Act as a collaboration server")
                                                 ),
                                     default = "CLIENT")
+    bpy.types.Scene.selected_internals = bpy.props.StringProperty()
 
 def unregister():
     '''unregisters all classes in this module'''
@@ -75,6 +76,7 @@ def unregister():
     del bpy.types.Scene.server_ip_address
     del bpy.types.Scene.server_port
     del bpy.types.Scene.mode
+    del bpy.types.Scene.selected_internals
     
 #--- ### Main code
 if __name__ == '__main__':

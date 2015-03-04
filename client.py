@@ -173,9 +173,10 @@ class StartSession(bpy.types.Operator):
                     #get the method that matches the name of the last operator
                     encode_function = getattr(self.enc,self.enc.format_op_name(latest_op.name))
                     mode = bpy.context.mode
-                    selected = {
-                        'objects' : self.enc.get_obj_names(bpy.context.selected_objects)
-                    }
+                    selected = {}
+                    if bpy.context.selected_objects != []:
+                        selected['objects'] = self.enc.get_obj_names(bpy.context.selected_objects)
+                    
                     if bpy.context.active_object != None:
                         active_object = bpy.context.active_object.name
                         if mode in ('EDIT_MESH'):
@@ -197,9 +198,14 @@ class StartSession(bpy.types.Operator):
     def call_encoder(self):
         if bpy.context.selected_objects != []:
             selected_objects = self.enc.get_obj_names(bpy.context.selected_objects)
-            bpy.context.scene.active_obj_name = json.dumps(selected_objects) 
+            bpy.context.scene.active_obj_name = json.dumps(selected_objects)
+            if bpy.context.mode in ('EDIT_MESH'):
+                selected_internals = self.dec.get_internals(bpy.context.active_object.name)
+                bpy.context.scene.selected_internals = json.dumps(selected_internals)
+                print(bpy.context.scene.selected_internals) 
         self.encode_operation()
         #print(bpy.context.scene.active_obj_name)
+        
             
     def decode_operation(self):
         '''gets an operation from a queue and calls the appropriate function '''
