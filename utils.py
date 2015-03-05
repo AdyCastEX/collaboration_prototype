@@ -1,5 +1,5 @@
 import os
-
+import bpy
     
 def format_file_path(pathname):
     '''formats a path name to replace backslashes with forward slashes
@@ -35,4 +35,35 @@ def create_directory(filepath):
     '''
     
     os.mkdir(filepath)
+
+def save_state(path,name):
+    ''' exports the current state of the scene to a collada (.dae) file 
     
+    Parameters
+    path         -- a string that contains the filepath to the folder where the file will be saved
+    name         -- a string that contains the filename of the file to save
+    '''
+    
+    if not os.path.isdir(path):
+        utils.create_directory(path) 
+    filename = path + "/" + name
+    
+    bpy.ops.wm.collada_export(filepath=filename)
+        
+def load_state(path,name):
+    ''' imports a scene from a collada(.dae) file 
+    
+    Parameters
+    path         -- a string that contains the filepath of the folder where the file will be loaded
+    name         -- a string that contains the filename of the collada file to load
+    '''
+    
+    #clear the scene to remove objects that are not part of the state to load
+    bpy.ops.object.select_all(action='SELECT')
+    bpy.ops.object.delete()
+    
+    try:
+        filename = path + "/" + name + ".dae"
+        bpy.ops.wm.collada_import(filepath=filename)
+    except IOError:
+        pass
