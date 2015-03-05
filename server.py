@@ -3,8 +3,10 @@ import json
 import threading
 import queue
 import socket
+import os
 from . import encoder
 from . import decoder
+from . import utils
 
 class StartServer(bpy.types.Operator):
     '''starts a persistent collaboration server'''
@@ -196,6 +198,8 @@ class StartServer(bpy.types.Operator):
             self.execute_operation(op)
             data['operation'] = op
             
+            self.save_state()
+            
             if not self.outqueue.full():
                 self.outqueue.put(data)
         
@@ -217,6 +221,21 @@ class StartServer(bpy.types.Operator):
             data = bytes(json.dumps(data_json),'utf-8')
             t = threading.Thread(target=self.client_thread,args=(data,sender))
             t.start()
+            
+    def save_state(self):
+        ''' exports the current state of the scene to a collada (.dae) file '''
+        
+        
+        filepath = bpy.context.scene.server_filepath
+        
+        if not os.path.isdir(filepath):
+            utils.create_directory(filepath) 
+        filename = filepath + "/" + bpy.context.scene.session_name
+        
+        bpy.ops.wm.collada_export(filepath=filename)
+            
+            
+        
             
 class StopServer(bpy.types.Operator):
     '''stops a collaboration server '''

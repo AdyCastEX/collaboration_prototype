@@ -32,6 +32,10 @@ class CollaborationPanel(bpy.types.Panel):
             
         elif sceneprops.mode == "SERVER":
             row = layout.row()
+            row.prop(sceneprops,"session_name",text="Session")
+            row = layout.row()
+            row.prop(sceneprops,"server_filepath",text="Filepath")
+            row = layout.row()
             #a button that calls bpy.ops.development.start_server()
             row.operator("development.start_server")
             row = layout.row()

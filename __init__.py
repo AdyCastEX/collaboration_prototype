@@ -39,12 +39,14 @@ if "init_data" in locals():
     imp.reload(encoder)
     imp.reload(decoder)
     imp.reload(server)
+    imp.reload(utils)
 else:
     from . import client
     from . import ui
     from . import encoder
     from . import decoder
     from . import server
+    from . import utils
 
 #--- ### Register
 def register():
@@ -66,6 +68,8 @@ def register():
                                                 ),
                                     default = "CLIENT")
     bpy.types.Scene.selected_internals = bpy.props.StringProperty()
+    bpy.types.Scene.server_filepath = bpy.props.StringProperty(default = utils.format_file_path(utils.get_file_path())+"/files")
+    bpy.types.Scene.session_name = bpy.props.StringProperty(default = "sample")
 
 def unregister():
     '''unregisters all classes in this module'''
@@ -77,6 +81,8 @@ def unregister():
     del bpy.types.Scene.server_port
     del bpy.types.Scene.mode
     del bpy.types.Scene.selected_internals
+    del bpy.types.Scene.server_filepath
+    del bpy.types.Scene.session_name
     
 #--- ### Main code
 if __name__ == '__main__':
