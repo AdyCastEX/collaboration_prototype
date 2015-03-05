@@ -38,6 +38,8 @@ class StartServer(bpy.types.Operator):
             self.inqueue = queue.Queue(30)
             self.outqueue = queue.Queue(30)
             
+            utils.load_state(bpy.context.scene.server_filepath,bpy.context.scene.session_name)
+            
             #initialize the server
             self.init_server(5050)
             serverthread = threading.Thread(target=self.server_thread,args=())
@@ -198,7 +200,7 @@ class StartServer(bpy.types.Operator):
             self.execute_operation(op)
             data['operation'] = op
             
-            self.save_state()
+            utils.save_state(bpy.context.scene.server_filepath,bpy.context.scene.session_name)
             
             if not self.outqueue.full():
                 self.outqueue.put(data)
@@ -222,21 +224,8 @@ class StartServer(bpy.types.Operator):
             t = threading.Thread(target=self.client_thread,args=(data,sender))
             t.start()
             
-    def save_state(self):
-        ''' exports the current state of the scene to a collada (.dae) file '''
-        
-        
-        filepath = bpy.context.scene.server_filepath
-        
-        if not os.path.isdir(filepath):
-            utils.create_directory(filepath) 
-        filename = filepath + "/" + bpy.context.scene.session_name
-        
-        bpy.ops.wm.collada_export(filepath=filename)
-            
-            
-        
-            
+    
+                
 class StopServer(bpy.types.Operator):
     '''stops a collaboration server '''
     bl_idname = "development.stop_server"
