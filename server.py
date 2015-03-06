@@ -16,9 +16,10 @@ class StartServer(bpy.types.Operator):
     
     ''' 
     Attributes
-    servsock    -- a socket object used to serve requests
+    servsock    -- a UDP socket object used to serve requests
+    regsock    -- a TCP socket object used for subscription and sending files
     clients     -- a list containing the addresses of the clients
-    address     -- a tuple containing the ip address and port of the server socket
+    addr        -- a tuple containing the ip address and port of the server socket
     dec         -- a decoder object used to run operations
     inqueue     -- a Queue object that stores received operations
     outqueue    -- a Queue object that stores operations to send to clients
@@ -44,6 +45,8 @@ class StartServer(bpy.types.Operator):
             self.init_server(5050)
             serverthread = threading.Thread(target=self.server_thread,args=())
             serverthread.start()
+            registerthread = threading.Thread(target=self.register_thread,args=())
+            registerthread.start()
             
             #bind the modal events
             self._timer = bpy.context.window_manager.event_timer_add(1.0, context.window)
@@ -77,17 +80,19 @@ class StartServer(bpy.types.Operator):
         '''
         
         self.servsock = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
+        self.regsock = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
         #host = socket.gethostname()
         temp_port = port
         success_flag = False
         while success_flag == False:
             try:
                 self.servsock.bind(('',temp_port))
+                self.regsock.bind(('',temp_port))
+                self.regsock.listen(10)
                 print(temp_port)
                 success_flag = True
             except OSError:
-                temp_port+=1
-                
+                temp_port+=1        
         self.addr = self.servsock.getsockname()
         
     def close_server(self):
@@ -109,8 +114,9 @@ class StartServer(bpy.types.Operator):
                 action = data['action']
                 #add a new subscriber if not yet in the list of clients
                 if addr not in self.clients and action in ('LOGIN','SUBSCRIBE'):
-                    t = threading.Thread(target=self.subscribe_thread,args=('',addr))
-                    t.start()
+                    #t = threading.Thread(target=self.subscribe_thread,args=('',addr))
+                    #t.start()
+                    pass
                 
                 #accept data if it came from a node in the list of clients and that client intends to send data
                 elif sender in self.clients and action in ('SEND'):
@@ -118,14 +124,36 @@ class StartServer(bpy.types.Operator):
                         self.inqueue.put(data)
                         
                 elif sender in self.clients and action in ('LOGOUT','UNSUBSCRIBE'):
-                    t = threading.Thread(target=self.unsubscribe_thread,args=(sender,addr))
-                    t.start()
+                    #t = threading.Thread(target=self.unsubscribe_thread,args=(sender,addr))
+                    #t.start()
+                    pass
                     
             except OSError:
                 #this can happen when the socket is suddenly closed while waiting for data
                 break
             
-    
+    def register_thread(self):
+        '''a thread function that continuously listens for login or logout requests'''
+        while bpy.context.scene.thread_flag == True:
+            try:
+                conn,addr = self.regsock.accept()
+                
+                data_bytes = conn.recv(4096)
+                data = json.loads(data_bytes.decode('utf-8'))
+                sender = (data['ip_addr'],data['port'])
+                action = data['action']
+                print(data_bytes)
+                
+                if addr not in self.clients and action in ('LOGIN','SUBSCRIBE'):
+                    t = threading.Thread(target=self.subscribe_thread(conn, addr))
+                    t.start()
+                
+                elif sender in self.clients and action in ('LOGOUT','UNSUBSCRIBE'):
+                    t = threading.Thread(target=self.unsubscribe_thread(sender, conn))
+                    t.start()
+                
+            except OSError:
+                pass
     
     def client_thread(self,data,sender):
         ''' broadcasts data to all connected clients except for the sender
@@ -147,7 +175,7 @@ class StartServer(bpy.types.Operator):
         '''add a node to the list of clients and return an acknowledgement of success
         
         Parameters
-        sender  -- a tuple containing the ip address and port data of a node
+        sender  -- a TCP socket object used to send data back to a sender
         addr    -- the address of the socket used to send a subscribe request
         '''
         
@@ -159,13 +187,13 @@ class StartServer(bpy.types.Operator):
             'port' : addr[1]
         }
         #convert the ack dict into a json string then encode as a bytes object before sending
-        self.servsock.sendto(bytes(json.dumps(ack),'utf-8'),addr)
+        sender.sendall(bytes(json.dumps(ack),'utf-8'))
         
-    def unsubscribe_thread(self,sender,addr):
+    def unsubscribe_thread(self,sender,conn):
         '''remove a node from the list of clients
         
         sender  -- a tuple containing the ip address and port data of a node
-        addr    -- a tuple containing the ip address and port data of the socket that sent the request
+        conn    -- a TCP socket object used to communicate with a sender
         '''
         
         self.clients.remove(sender)
@@ -174,7 +202,7 @@ class StartServer(bpy.types.Operator):
             'success' : True
         }
         
-        self.servsock.sendto(bytes(json.dumps(ack),'utf-8'),addr)
+        conn.sendall(bytes(json.dumps(ack),'utf-8'))
         
     def send_data(self,data,receiver):
         '''send data to a specific receiver
