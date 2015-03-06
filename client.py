@@ -123,7 +123,7 @@ class StartSession(bpy.types.Operator):
         Return Value
         client_address  -- a tuple containing an arbitrary ip address and port assigned by the server
         '''
-        s = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
+        s = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
         s.connect(server_address)
         request = {
             'action' : 'SUBSCRIBE',
@@ -132,7 +132,7 @@ class StartSession(bpy.types.Operator):
         }
         
         s.sendall(bytes(json.dumps(request),'utf-8'))
-        reply_bytes,addr = s.recvfrom(4096)
+        reply_bytes = s.recv(4096)
         s.close()
         reply = json.loads(reply_bytes.decode('utf-8'))
         client_address = (reply['ip'],reply['port'])
@@ -145,7 +145,7 @@ class StartSession(bpy.types.Operator):
         server_address -- a tuple containing the server's ip address and port
         
         '''
-        s = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
+        s = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
         s.connect(server_address)
         request = {
             'action' : 'UNSUBSCRIBE',
@@ -154,7 +154,7 @@ class StartSession(bpy.types.Operator):
         }
         
         s.sendall(bytes(json.dumps(request),'utf-8'))
-        reply_bytes,addr = s.recvfrom(4096)
+        reply_bytes = s.recv(4096)
         s.close()
         
     def encode_operation(self):
