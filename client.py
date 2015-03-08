@@ -7,6 +7,7 @@ import time
 import bmesh
 from . import encoder
 from . import decoder
+from . import utils
     
 class StartSession(bpy.types.Operator):
     ''' initiates a persistent collaborative session ''' 
@@ -29,28 +30,35 @@ class StartSession(bpy.types.Operator):
         
         #change to active state only if the operator is inactive
         if context.scene.thread_flag == False:
-            #initialize flags and storage objects
-            context.scene.thread_flag = True
-            context.scene.modal_flag = True
-            self.inqueue = queue.Queue(20)
-            self.outqueue = queue.Queue(20)
-            self.dec = decoder.Decoder()
-            self.enc = encoder.Encoder()
-            self.last_op = {}
             
             #values of the server's ip addr and port are assigned via forms in the plugin's panel
-            self.address = self.subscribe((bpy.context.scene.server_ip_address,bpy.context.scene.server_port))
-            #bind the listener to the address received from the subscribe function
-            self.bind_listener(self.address)
-            #create and start the thread for the listener
-            listening_thread = threading.Thread(target=self.listener,args=())
-            listening_thread.start()
-            wm = context.window_manager
-            #add an event timer that triggers every n seconds
-            self._timer = wm.event_timer_add(1.0,context.window)
-            #add a modal handler that will allow the plugin to listen for events
-            context.window_manager.modal_handler_add(self)
-            self.execute(context)
+            result = self.subscribe((bpy.context.scene.server_ip_address,bpy.context.scene.server_port))
+            
+            #activate plugin functionality only if the subscription was successful
+            if result['success'] == True:
+                #self.address = (result['ip_addr'],result['port'])
+                
+                #initialize flags and storage objects
+                context.scene.thread_flag = True
+                context.scene.modal_flag = True
+                self.inqueue = queue.Queue(20)
+                self.outqueue = queue.Queue(20)
+                self.dec = decoder.Decoder()
+                self.enc = encoder.Encoder()
+                self.last_op = {}
+                
+                
+                #bind the listener to the address received from the subscribe function
+                self.bind_listener(self.address)
+                #create and start the thread for the listener
+                listening_thread = threading.Thread(target=self.listener,args=())
+                listening_thread.start()
+                wm = context.window_manager
+                #add an event timer that triggers every n seconds
+                self._timer = wm.event_timer_add(1.0,context.window)
+                #add a modal handler that will allow the plugin to listen for events
+                context.window_manager.modal_handler_add(self)
+                self.execute(context)
         return {'RUNNING_MODAL'}
     
     def execute(self,context):
@@ -121,22 +129,38 @@ class StartSession(bpy.types.Operator):
         server_address  -- a tuple containing the server's ip address and port
         
         Return Value
-        client_address  -- a tuple containing an arbitrary ip address and port assigned by the server
+        result           -- a dict object containing the following:
+            success      -- a boolean value indicating whether the subscription succeeeded or not (True or False)
+            ip_addr      -- an arbitrary ip address string assigned by the server
+            port         -- an arbitrary port number assigned by the server
         '''
         s = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
         s.connect(server_address)
         request = {
             'action' : 'SUBSCRIBE',
             'ip_addr': '',
-            'port' : ''
+            'port' : '',
+            'filename' : bpy.context.scene.session_name
         }
         
         s.sendall(bytes(json.dumps(request),'utf-8'))
         reply_bytes = s.recv(4096)
         s.close()
         reply = json.loads(reply_bytes.decode('utf-8'))
-        client_address = (reply['ip'],reply['port'])
-        return client_address
+        print(reply)
+        result = {
+            'success' : reply['success'],
+            'ip_addr' : reply['ip'],
+            'port'    : reply['port']
+                  
+        }
+        
+        if reply['success'] == True:
+            self.address = (result['ip_addr'],result['port'])
+            self.request_file(server_address)
+            utils.load_state(bpy.context.scene.client_filepath,bpy.context.scene.session_name)
+        
+        return result
     
     def unsubscribe(self,server_address):
         ''' unsubscribe from a server's updates
@@ -156,6 +180,38 @@ class StartSession(bpy.types.Operator):
         s.sendall(bytes(json.dumps(request),'utf-8'))
         reply_bytes = s.recv(4096)
         s.close()
+        
+    def request_file(self,server_address):
+        '''request a collada file from the server'''
+        requester = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+        requester.connect(server_address)
+        
+        request = {
+            'action' : 'REQUEST_FILE',
+            'ip_addr' : self.address[0],
+            'port' : self.address[1],
+            'filename' : bpy.context.scene.session_name
+        }
+        
+        requester.sendall(bytes(json.dumps(request),'utf-8'))
+        
+        filepath = bpy.context.scene.client_filepath
+        if not utils.check_dir(filepath):
+            utils.create_directory(filepath)
+            
+        filename = filepath + "/" + bpy.context.scene.session_name + ".dae"
+        output_file = open(filename,'wb')
+        
+        server_reply = requester.recv(4096)
+        while server_reply:
+            print(server_reply)
+            print("end of frame")
+            output_file.write(server_reply)
+            server_reply = requester.recv(4096)
+            
+        output_file.close()
+        requester.close()
+            
         
     def encode_operation(self):
         ''' gets an operator from the operator history and encodes it into sendable form'''
@@ -259,6 +315,10 @@ class StartSession(bpy.types.Operator):
         }
         
         return internals
+    
+    
+        
+        
             
             
 class EndSession(bpy.types.Operator):

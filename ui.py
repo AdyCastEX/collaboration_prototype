@@ -18,6 +18,10 @@ class CollaborationPanel(bpy.types.Panel):
         
         if sceneprops.mode == "CLIENT":
             row = layout.row()
+            row.prop(sceneprops,"client_filepath",text='Filepath')
+            row = layout.row()
+            row.prop(sceneprops,"session_name",text="Session")
+            row = layout.row()
             #a text field that updates bpy.context.scene.server_ip_address
             row.prop(bpy.context.scene,"server_ip_address",text="IP Address")
             row = layout.row()

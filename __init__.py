@@ -68,7 +68,8 @@ def register():
                                                 ),
                                     default = "CLIENT")
     bpy.types.Scene.selected_internals = bpy.props.StringProperty()
-    bpy.types.Scene.server_filepath = bpy.props.StringProperty(default = utils.format_file_path(utils.get_file_path())+"/files")
+    bpy.types.Scene.server_filepath = bpy.props.StringProperty(default = utils.format_file_path(utils.get_file_path())+"/files/server")
+    bpy.types.Scene.client_filepath = bpy.props.StringProperty(default = utils.format_file_path(utils.get_file_path())+"/files/client")
     bpy.types.Scene.session_name = bpy.props.StringProperty(default = "sample")
 
 def unregister():
