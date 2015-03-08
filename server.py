@@ -98,6 +98,7 @@ class StartServer(bpy.types.Operator):
     def close_server(self):
         ''' close a server '''
         self.servsock.close()
+        self.regsock.close()
         #remove the timer to prevent redundancy when the server is re-initialized
         bpy.context.window_manager.event_timer_remove(self._timer)
     
@@ -145,11 +146,15 @@ class StartServer(bpy.types.Operator):
                 print(data_bytes)
                 
                 if addr not in self.clients and action in ('LOGIN','SUBSCRIBE'):
-                    t = threading.Thread(target=self.subscribe_thread(conn, addr))
+                    t = threading.Thread(target=self.subscribe_thread(conn, addr, data))
                     t.start()
                 
                 elif sender in self.clients and action in ('LOGOUT','UNSUBSCRIBE'):
                     t = threading.Thread(target=self.unsubscribe_thread(sender, conn))
+                    t.start()
+                    
+                elif sender in self.clients and action in ('REQUEST_FILE'):
+                    t = threading.Thread(target=self.send_file,args=(conn,data))
                     t.start()
                 
             except OSError:
@@ -171,21 +176,31 @@ class StartServer(bpy.types.Operator):
             
             self.send_data(data,client)
             
-    def subscribe_thread(self,sender,addr):
+    def subscribe_thread(self,sender,addr,data):
         '''add a node to the list of clients and return an acknowledgement of success
         
         Parameters
-        sender  -- a TCP socket object used to send data back to a sender
-        addr    -- the address of the socket used to send a subscribe request
+        sender  -- a TCP socket object used to send data back to a node
+        addr    -- the address of the socket that sent a request
+        data    -- a dict object that contains data received from a node
         '''
         
-        self.clients.append(addr)
-        print(self.clients)
-        ack = {
-            'success' : True,
-            'ip' : addr[0],
-            'port' : addr[1]
-        }
+        if utils.check_file(bpy.context.scene.server_filepath,data['filename']):
+            self.clients.append(addr)
+            print(self.clients)
+            ack = {
+                'success' : True,
+                'ip' : addr[0],
+                'port' : addr[1]
+            }
+            
+        elif not utils.check_file(bpy.context.scene.server_filepath,data['filename']):
+            print(self.clients)
+            ack = {
+                'success' : False,
+                'ip' : addr[0],
+                'port' : addr[1]
+            }
         #convert the ack dict into a json string then encode as a bytes object before sending
         sender.sendall(bytes(json.dumps(ack),'utf-8'))
         
@@ -203,6 +218,30 @@ class StartServer(bpy.types.Operator):
         }
         
         conn.sendall(bytes(json.dumps(ack),'utf-8'))
+        
+    def send_file(self,conn,data):
+        '''sends a file to a client
+        
+        Parameters
+
+        conn      -- a TCP socket object used to connect to a client
+        data      -- a dictionary object that contains information from a client
+        
+        '''
+        
+        filename = bpy.context.scene.server_filepath + "/" + data['filename'] + ".dae"
+        
+        try:
+            reply_file = open(filename,'rb')
+            file_part = reply_file.read(4096)
+            while file_part:
+                print('sending part...')
+                conn.sendall(file_part)
+                file_part = reply_file.read(4096)
+        except IOError:
+            print("File not found")
+            
+        conn.close()
         
     def send_data(self,data,receiver):
         '''send data to a specific receiver
@@ -244,7 +283,9 @@ class StartServer(bpy.types.Operator):
         op_function(op)
         
     def broadcast_operation(self):
-        '''gets an operation from the outqueue and starts a thread for sending data to connected clients'''
+        '''gets an operation from the outqueue and starts a thread for sending data to connected clients
+        
+        '''
         if not self.outqueue.empty():
             data_json = self.outqueue.get()
             sender = (data_json['ip_addr'],data_json['port'])
