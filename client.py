@@ -36,7 +36,6 @@ class StartSession(bpy.types.Operator):
             
             #activate plugin functionality only if the subscription was successful
             if result['success'] == True:
-                #self.address = (result['ip_addr'],result['port'])
                 
                 #initialize flags and storage objects
                 context.scene.thread_flag = True
@@ -59,6 +58,9 @@ class StartSession(bpy.types.Operator):
                 #add a modal handler that will allow the plugin to listen for events
                 context.window_manager.modal_handler_add(self)
                 self.execute(context)
+                
+            else:
+                pass
         return {'RUNNING_MODAL'}
     
     def execute(self,context):
@@ -134,6 +136,7 @@ class StartSession(bpy.types.Operator):
             ip_addr      -- an arbitrary ip address string assigned by the server
             port         -- an arbitrary port number assigned by the server
         '''
+        
         s = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
         s.connect(server_address)
         request = {
@@ -143,11 +146,14 @@ class StartSession(bpy.types.Operator):
             'filename' : bpy.context.scene.session_name
         }
         
+        #send a request to register the user to the list of clients in the server
         s.sendall(bytes(json.dumps(request),'utf-8'))
+        #wait for an acknowledgement from the server
         reply_bytes = s.recv(4096)
         s.close()
         reply = json.loads(reply_bytes.decode('utf-8'))
         print(reply)
+        
         result = {
             'success' : reply['success'],
             'ip_addr' : reply['ip'],
@@ -182,7 +188,12 @@ class StartSession(bpy.types.Operator):
         s.close()
         
     def request_file(self,server_address):
-        '''request a collada file from the server'''
+        '''request a collada file from the server
+        
+        Parameters
+        server_address     -- a tuple containing the ip address and port of the server to connect to
+        '''
+        
         requester = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
         requester.connect(server_address)
         
@@ -193,22 +204,30 @@ class StartSession(bpy.types.Operator):
             'filename' : bpy.context.scene.session_name
         }
         
+        #send a request for the specified file
         requester.sendall(bytes(json.dumps(request),'utf-8'))
         
+        #filepath -- the folder where the file will be saved once received
         filepath = bpy.context.scene.client_filepath
+        #if the directory/folder does not exist, create it
         if not utils.check_dir(filepath):
             utils.create_directory(filepath)
-            
+        
         filename = filepath + "/" + bpy.context.scene.session_name + ".dae"
+        #open the file for writing in binary
         output_file = open(filename,'wb')
         
+        #receive a fragment of the file
         server_reply = requester.recv(4096)
+        #keep waiting for fragments while the file is not complete
         while server_reply:
-            print(server_reply)
-            print("end of frame")
+            #print(server_reply)
+            #print("end of frame")
+            #write the received bytes to the output file
             output_file.write(server_reply)
             server_reply = requester.recv(4096)
             
+        #close the file stream
         output_file.close()
         requester.close()
             

@@ -113,22 +113,12 @@ class StartServer(bpy.types.Operator):
                 data = json.loads(data_bytes.decode())
                 sender = (data['ip_addr'],data['port'])
                 action = data['action']
-                #add a new subscriber if not yet in the list of clients
-                if addr not in self.clients and action in ('LOGIN','SUBSCRIBE'):
-                    #t = threading.Thread(target=self.subscribe_thread,args=('',addr))
-                    #t.start()
-                    pass
                 
                 #accept data if it came from a node in the list of clients and that client intends to send data
-                elif sender in self.clients and action in ('SEND'):
+                if sender in self.clients and action in ('SEND'):
                     if not self.inqueue.full():
                         self.inqueue.put(data)
-                        
-                elif sender in self.clients and action in ('LOGOUT','UNSUBSCRIBE'):
-                    #t = threading.Thread(target=self.unsubscribe_thread,args=(sender,addr))
-                    #t.start()
-                    pass
-                    
+                                            
             except OSError:
                 #this can happen when the socket is suddenly closed while waiting for data
                 break
@@ -145,6 +135,7 @@ class StartServer(bpy.types.Operator):
                 action = data['action']
                 print(data_bytes)
                 
+                #add a new subscriber if not yet in the list of clients
                 if addr not in self.clients and action in ('LOGIN','SUBSCRIBE'):
                     t = threading.Thread(target=self.subscribe_thread(conn, addr, data))
                     t.start()
@@ -185,6 +176,7 @@ class StartServer(bpy.types.Operator):
         data    -- a dict object that contains data received from a node
         '''
         
+        #if the requested file/session exists, add the user to the list of clients and send a success acknowledgement
         if utils.check_file(bpy.context.scene.server_filepath,data['filename']):
             self.clients.append(addr)
             print(self.clients)
@@ -194,6 +186,7 @@ class StartServer(bpy.types.Operator):
                 'port' : addr[1]
             }
             
+        #if the requested file/session does not exist, do not add the user to the list and send a failure acknowledgement
         elif not utils.check_file(bpy.context.scene.server_filepath,data['filename']):
             print(self.clients)
             ack = {
@@ -232,8 +225,11 @@ class StartServer(bpy.types.Operator):
         filename = bpy.context.scene.server_filepath + "/" + data['filename'] + ".dae"
         
         try:
+            #open the collada file for reading in binary mode
             reply_file = open(filename,'rb')
+            #get a fragment (4096 bytes) of the file
             file_part = reply_file.read(4096)
+            #keep getting fragments and send them as long as there are still bytes to read
             while file_part:
                 print('sending part...')
                 conn.sendall(file_part)
