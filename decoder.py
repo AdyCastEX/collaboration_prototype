@@ -83,24 +83,30 @@ class Decoder:
         #create a bmesh to store the edit mode data of the object
         bm = bmesh.from_edit_mesh(bpy.data.objects[active_object].data)
         for i in internals['verts']:
+            #do not reselect an vertex if it does not exist (e.g the vertex was deleted)
             try:
                 bm.verts[i].select = flag
                 if flag == False:
                     deselected_verts.append(i)
+            #simply catch the exception and pass
             except IndexError:
                 pass
         for i in internals['edges']:
+            #do not reselect an edge if it does not exist (e.g. the edge was deleted)
             try:
                 bm.edges[i].select = flag
                 if flag == False:
                     deselected_edges.append(i)
+            #simply catch the exception and pass
             except IndexError:
                 pass
         for i in internals['faces']:
+            #do not reselect an face if it does not exist (e.g. the face was deleted)
             try:
                 bm.faces[i].select = flag
                 if flag == False:
                     deselected_faces.append(i)
+            #simple catch the exception and pass
             except IndexError:
                 pass
                 
@@ -160,8 +166,6 @@ class Decoder:
                 selected_internals = self.get_internals(current_active)
                 current_internals = self.refocus_edit_mode(current_active,selected_internals,False)
                 
-        
-            
         #if the mode of the received operation is OBJECT, move the selection of objects selected in the operation
         if op['mode'] in ('OBJECT'):
             self.refocus_object_mode(op['targets'], True)
@@ -174,10 +178,10 @@ class Decoder:
         #if the mode of the received operation is EDIT_MESH, move the selection 
         elif op['mode'] in ('EDIT_MESH'):
             
-            #move back to object to change the active object correctly
+            #move back to object mode to change the active object correctly
             bpy.ops.object.editmode_toggle()
             try:
-                #shift the active object to the active object in the received operation
+                #shift the active object so that the correct object is changed to edit mode
                 bpy.context.scene.objects.active = bpy.data.objects[op['active_object']]
             except KeyError:
                 pass
@@ -186,8 +190,6 @@ class Decoder:
             bpy.ops.object.editmode_toggle()
             internals = {'verts': op['verts'], 'edges' : op['edges'], 'faces' : op['faces']}
             self.refocus_edit_mode(op['active_object'],internals,True)
-            
-        
             
         focus = {
             'selected' : current_selected,
@@ -238,12 +240,14 @@ class Decoder:
             #if currently in edit mode, reselect all the internals that were previously selected
             elif current_mode in ('EDIT_MESH'):
                 
+                #move to object mode to correctly change the active object
                 bpy.ops.object.editmode_toggle()
                 try:
-                    #return the active object to the object that was previously active
+                    #change the active object so that the proper object changed to edit mode
                     bpy.context.scene.objects.active = bpy.data.objects[focus['active']]
                 except KeyError:
                     pass
+                #return to edit mode since this an edit mode operation
                 bpy.ops.object.editmode_toggle()
                 self.refocus_edit_mode(focus['active'], focus['internals'], True)
             
@@ -261,9 +265,6 @@ class Decoder:
                 self.refocus_edit_mode(focus['active'], focus['internals'],True)
         except KeyError:
             pass
-        
-        
-        
         
     def get_internals(self,active_object):
         '''gets the set of selected vertices, edges and faces

@@ -90,16 +90,16 @@ class Encoder:
         
     def delete(self,operator,target_objects,active_object,mode):
         '''creates an operation with attributes specific to a delete'''
+        
+        #since delete removes targets, use the saved properties to get the last selected targets
         if target_objects == {} or (target_objects['verts'] == [] and target_objects['edges'] == [] and target_objects['faces'] == []):
             selected_objects = {}
             selected_objects['objects'] = json.loads(bpy.context.scene.active_obj_name)
             if mode in ('EDIT_MESH'):
                 internals = json.loads(bpy.context.scene.selected_internals)
-                print("internals {0}".format(internals))
                 selected_objects['verts'] = internals['verts']
                 selected_objects['edges'] = internals['edges']
                 selected_objects['faces'] = internals['faces']
-                print("selected objects {0}".format(selected_objects))
             op = self.create_generic_operation(operator.name, selected_objects,active_object, mode)
         else:
             op = self.create_generic_operation(operator.name, target_objects,active_object, mode)
