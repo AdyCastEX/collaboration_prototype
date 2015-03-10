@@ -276,7 +276,8 @@ class StartSession(bpy.types.Operator):
             bpy.context.scene.active_obj_name = json.dumps(selected_objects)
             if bpy.context.mode in ('EDIT_MESH'):
                 selected_internals = self.dec.get_internals(bpy.context.active_object.name)
-                bpy.context.scene.selected_internals = json.dumps(selected_internals)
+                if selected_internals['verts'] != [] or selected_internals['edges'] != [] or selected_internals['faces'] != []:
+                    bpy.context.scene.selected_internals = json.dumps(selected_internals)
                 print(bpy.context.scene.selected_internals) 
         self.encode_operation()
         #print(bpy.context.scene.active_obj_name)

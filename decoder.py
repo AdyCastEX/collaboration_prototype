@@ -83,17 +83,26 @@ class Decoder:
         #create a bmesh to store the edit mode data of the object
         bm = bmesh.from_edit_mesh(bpy.data.objects[active_object].data)
         for i in internals['verts']:
-            bm.verts[i].select = flag
-            if flag == False:
-                deselected_verts.append(i)
+            try:
+                bm.verts[i].select = flag
+                if flag == False:
+                    deselected_verts.append(i)
+            except IndexError:
+                pass
         for i in internals['edges']:
-            bm.edges[i].select = flag
-            if flag == False:
-                deselected_edges.append(i)
+            try:
+                bm.edges[i].select = flag
+                if flag == False:
+                    deselected_edges.append(i)
+            except IndexError:
+                pass
         for i in internals['faces']:
-            bm.faces[i].select = flag
-            if flag == False:
-                deselected_faces.append(i)
+            try:
+                bm.faces[i].select = flag
+                if flag == False:
+                    deselected_faces.append(i)
+            except IndexError:
+                pass
                 
         deselected_internals['verts'] = deselected_verts
         deselected_internals['edges'] = deselected_edges
@@ -150,21 +159,35 @@ class Decoder:
             elif new_mode in ('EDIT_MESH'):
                 selected_internals = self.get_internals(current_active)
                 current_internals = self.refocus_edit_mode(current_active,selected_internals,False)
+                
+        
             
         #if the mode of the received operation is OBJECT, move the selection of objects selected in the operation
         if op['mode'] in ('OBJECT'):
             self.refocus_object_mode(op['targets'], True)
+            try:
+                #shift the active object to the active object in the received operation
+                bpy.context.scene.objects.active = bpy.data.objects[op['active_object']]
+            except KeyError:
+                pass
                  
         #if the mode of the received operation is EDIT_MESH, move the selection 
         elif op['mode'] in ('EDIT_MESH'):
+            
+            #move back to object to change the active object correctly
+            bpy.ops.object.editmode_toggle()
+            try:
+                #shift the active object to the active object in the received operation
+                bpy.context.scene.objects.active = bpy.data.objects[op['active_object']]
+            except KeyError:
+                pass
+            
+            #shift back to edit mode as this is an edit mode case
+            bpy.ops.object.editmode_toggle()
             internals = {'verts': op['verts'], 'edges' : op['edges'], 'faces' : op['faces']}
             self.refocus_edit_mode(op['active_object'],internals,True)
             
-        try:
-            #shift the active object to the active object in the received operation
-            bpy.context.scene.objects.active = bpy.data.objects[op['active_object']]
-        except KeyError:
-            pass
+        
             
         focus = {
             'selected' : current_selected,
@@ -205,10 +228,23 @@ class Decoder:
             
             #if currently in object mode, reselect all objects that were previously selected
             if current_mode in ('OBJECT'):
+                try:
+                    #return the active object to the object that was previously active
+                    bpy.context.scene.objects.active = bpy.data.objects[focus['active']]
+                except KeyError:
+                    pass
                 self.refocus_object_mode(focus['selected'],True)
             
             #if currently in edit mode, reselect all the internals that were previously selected
             elif current_mode in ('EDIT_MESH'):
+                
+                bpy.ops.object.editmode_toggle()
+                try:
+                    #return the active object to the object that was previously active
+                    bpy.context.scene.objects.active = bpy.data.objects[focus['active']]
+                except KeyError:
+                    pass
+                bpy.ops.object.editmode_toggle()
                 self.refocus_edit_mode(focus['active'], focus['internals'], True)
             
             #change the mode back to what it was before shifting focus
@@ -226,11 +262,7 @@ class Decoder:
         except KeyError:
             pass
         
-        try:
-            #return the active object to the object that was previously active
-            bpy.context.scene.objects.active = bpy.data.objects[focus['active']]
-        except KeyError:
-            pass
+        
         
         
     def get_internals(self,active_object):
