@@ -103,4 +103,37 @@ def check_dir(path):
         exist_flag = False
         
     return exist_flag
+
+def format_op_name(op_name):
+    '''converts an operator name to a format that follows method naming conventions
+    
+    Parameters:
+    op_name        -- the name of the operator from the info space
+    
+    Return Value
+    formatted_name -- the properly formatted name of the operator
+    
+    '''
+    #convert the op name to lowercase
+    formatted_name = op_name.lower()
+    #replace all spaces with underscores
+    while " " in formatted_name:
+        formatted_name = formatted_name.replace(" ","_")
+    return formatted_name
+    
+def get_obj_names(target_objects):
+    '''gets the names of multiple objects
+    
+    Parameters
+    target_objects    -- a list containing target objects
+    
+    Return Value
+    obj_names         -- a list of names of target objects in string format
+    
+    '''
+    obj_names = []
+    for obj in target_objects:
+        obj_names.append(obj.name)
+        
+    return obj_names
     

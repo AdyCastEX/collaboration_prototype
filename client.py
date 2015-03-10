@@ -246,11 +246,11 @@ class StartSession(bpy.types.Operator):
                 self.last_op = latest_op
                 try:
                     #get the method that matches the name of the last operator
-                    encode_function = getattr(self.enc,self.enc.format_op_name(latest_op.name))
+                    encode_function = getattr(self.enc,utils.format_op_name(latest_op.name))
                     mode = bpy.context.mode
                     selected = {}
                     if bpy.context.selected_objects != []:
-                        selected['objects'] = self.enc.get_obj_names(bpy.context.selected_objects)
+                        selected['objects'] = utils.get_obj_names(bpy.context.selected_objects)
                     
                     if bpy.context.active_object != None:
                         active_object = bpy.context.active_object.name
@@ -271,14 +271,16 @@ class StartSession(bpy.types.Operator):
                     print("operation not supported")
         
     def call_encoder(self):
+        '''keeps track of selected objects/internals (mostly for backtracking in delete) and calls the encoder'''
         if bpy.context.selected_objects != []:
-            selected_objects = self.enc.get_obj_names(bpy.context.selected_objects)
+            selected_objects = utils.get_obj_names(bpy.context.selected_objects)
             bpy.context.scene.active_obj_name = json.dumps(selected_objects)
             if bpy.context.mode in ('EDIT_MESH'):
                 selected_internals = self.dec.get_internals(bpy.context.active_object.name)
+                #update the last selected internals only if not empty to avoid select mismatches on delete
                 if selected_internals['verts'] != [] or selected_internals['edges'] != [] or selected_internals['faces'] != []:
                     bpy.context.scene.selected_internals = json.dumps(selected_internals)
-                print(bpy.context.scene.selected_internals) 
+                #print(bpy.context.scene.selected_internals) 
         self.encode_operation()
         #print(bpy.context.scene.active_obj_name)
         
@@ -336,11 +338,6 @@ class StartSession(bpy.types.Operator):
         
         return internals
     
-    
-        
-        
-            
-            
 class EndSession(bpy.types.Operator):
     ''' ends a persistent collaborative session '''
     bl_idname = "development.end_session"
