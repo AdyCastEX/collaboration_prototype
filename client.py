@@ -4,7 +4,6 @@ import threading
 import queue
 import socket
 import time
-import bmesh
 from . import encoder
 from . import decoder
 from . import utils
@@ -255,7 +254,7 @@ class StartSession(bpy.types.Operator):
                     if bpy.context.active_object != None:
                         active_object = bpy.context.active_object.name
                         if mode in ('EDIT_MESH'):
-                            internals = self.get_internals(bpy.context.active_object)
+                            internals = utils.get_internals(bpy.context.active_object.name)
                             selected['verts'] = internals['verts']
                             selected['edges'] = internals['edges']
                             selected['faces'] = internals['faces']
@@ -276,7 +275,7 @@ class StartSession(bpy.types.Operator):
             selected_objects = utils.get_obj_names(bpy.context.selected_objects)
             bpy.context.scene.active_obj_name = json.dumps(selected_objects)
             if bpy.context.mode in ('EDIT_MESH'):
-                selected_internals = self.dec.get_internals(bpy.context.active_object.name)
+                selected_internals = utils.get_internals(bpy.context.active_object.name)
                 #update the last selected internals only if not empty to avoid select mismatches on delete
                 if selected_internals['verts'] != [] or selected_internals['edges'] != [] or selected_internals['faces'] != []:
                     bpy.context.scene.selected_internals = json.dumps(selected_internals)
@@ -290,7 +289,7 @@ class StartSession(bpy.types.Operator):
         #print("decode")
         if not self.inqueue.empty():
             op = self.inqueue.get()
-            decode_function = getattr(self.dec,self.dec.format_op_name(op['name']))
+            decode_function = getattr(self.dec,utils.format_op_name(op['name']))
             decode_function(op)
             
     def send_operation(self):
@@ -310,34 +309,7 @@ class StartSession(bpy.types.Operator):
             
             s.sendall(bytes(json.dumps(data),'utf-8'))
             s.close()
-        
-    def get_internals(self,active_object):
-        '''gets the set of selected vertices, edges and faces
-        
-        Parameters
-        active_object     -- a string containing the name of the object that contains the internals
-        
-        Return Value
-        internals         -- a dictionary object that contains the following:
-            verts         -- a list containing the indices of selected vertices
-            edges         -- a list containing the indices of selected edges
-            faces         -- a list containing the indices of selected faces
-        
-        '''
-        bm = bmesh.from_edit_mesh(active_object.data)
-        
-        verts = [i.index for i in bm.verts if i.select]
-        edges = [i.index for i in bm.edges if i.select]
-        faces = [i.index for i in bm.faces if i.select]
-        
-        internals = {
-            'verts' : verts,
-            'edges' : edges,
-            'faces' : faces
-        }
-        
-        return internals
-    
+
 class EndSession(bpy.types.Operator):
     ''' ends a persistent collaborative session '''
     bl_idname = "development.end_session"
