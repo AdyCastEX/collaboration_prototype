@@ -1,40 +1,7 @@
 import bpy
-import bmesh
+from . import utils
 
 class Decoder:
-    
-    def format_op_name(self,op_name):
-        '''converts an operator name to a format that follows method naming conventions
-        
-        Parameters:
-        op_name -- the name of the operator from the info space
-        
-        Return Value
-        formatted_name -- the properly formatted name of the operator
-        
-        '''
-        #convert the op name to lowercase
-        formatted_name = op_name.lower()
-        #replace all spaces with underscores
-        while " " in formatted_name:
-            formatted_name = formatted_name.replace(" ","_")
-        return formatted_name
-    
-    def get_obj_names(self,target_objects):
-        '''gets the names of multiple objects
-        
-        Parameters
-        target_objects    -- a list containing target objects
-        
-        Return Value
-        obj_names         -- a list of names of target objects in string format
-        
-        '''
-        obj_names = []
-        for obj in target_objects:
-            obj_names.append(obj.name)
-            
-        return obj_names
     
     def refocus_object_mode(self,target_objects,flag):
         '''moves the selection to a collection of objects, in object mode
@@ -140,12 +107,12 @@ class Decoder:
         
         #deselect objects if in object mode
         if current_mode in ('OBJECT'):
-            selected_objs = self.get_obj_names(bpy.context.selected_objects)
+            selected_objs = utils.get_obj_names(bpy.context.selected_objects)
             current_selected = self.refocus_object_mode(selected_objs,False)
             
         #deselect internals if in edit mode
         elif current_mode in ('EDIT_MESH'):
-            selected_internals = self.get_internals(current_active)
+            selected_internals = utils.get_internals(current_active)
             current_internals = self.refocus_edit_mode(current_active,selected_internals,False)
         
         #if the mode of the received operation is different from the current mode, shift the mode
@@ -158,12 +125,12 @@ class Decoder:
             
             #from EDIT_MESH to OBJECT - deselect currently selected objects as well
             if new_mode in ('OBJECT'):
-                selected_objs = self.get_obj_names(bpy.context.selected_objects)
+                selected_objs = utils.get_obj_names(bpy.context.selected_objects)
                 current_selected = self.refocus_object_mode(selected_objs,False)
                 
             #from OBJECT to EDIT_MESH - deselect currently selected internals as well
             elif new_mode in ('EDIT_MESH'):
-                selected_internals = self.get_internals(current_active)
+                selected_internals = utils.get_internals(current_active)
                 current_internals = self.refocus_edit_mode(current_active,selected_internals,False)
                 
         #if the mode of the received operation is OBJECT, move the selection of objects selected in the operation
@@ -266,36 +233,6 @@ class Decoder:
         except KeyError:
             pass
         
-    def get_internals(self,active_object):
-        '''gets the set of selected vertices, edges and faces
-        
-        Parameters
-        active_object     -- a string containing the name of the object that contains the internals
-        
-        Return Value
-        internals         -- a dictionary object that contains the following:
-            verts         -- a list containing the indices of selected vertices
-            edges         -- a list containing the indices of selected edges
-            faces         -- a list containing the indices of selected faces
-        
-        '''
-        
-        #create a bmesh object to access the internals of the object
-        bm = bmesh.from_edit_mesh(bpy.data.objects[active_object].data)
-        
-        verts = [i.index for i in bm.verts if i.select]
-        edges = [i.index for i in bm.edges if i.select]
-        faces = [i.index for i in bm.faces if i.select]
-        
-        internals = {
-            'verts' : verts,
-            'edges' : edges,
-            'faces' : faces
-        }
-        
-        return internals
-        
-    
     def translate(self,op):
         
         previous_selected = self.remove_focus(op)

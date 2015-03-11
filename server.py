@@ -39,7 +39,9 @@ class StartServer(bpy.types.Operator):
             self.inqueue = queue.Queue(30)
             self.outqueue = queue.Queue(30)
             
-            utils.load_state(bpy.context.scene.server_filepath,bpy.context.scene.session_name)
+            load_flag = utils.load_state(bpy.context.scene.server_filepath,bpy.context.scene.session_name)
+            if not load_flag:
+                utils.save_state(bpy.context.scene.server_filepath,bpy.context.scene.session_name)
             
             #initialize the server
             self.init_server(5050)
@@ -275,7 +277,7 @@ class StartServer(bpy.types.Operator):
         op      -- the operation for execution, in dictionary format
         
         '''
-        op_function = getattr(self.dec,self.dec.format_op_name(op['name']))
+        op_function = getattr(self.dec,utils.format_op_name(op['name']))
         op_function(op)
         
     def broadcast_operation(self):

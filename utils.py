@@ -1,5 +1,6 @@
 import os
 import bpy
+import bmesh
     
 def format_file_path(pathname):
     '''formats a path name to replace backslashes with forward slashes
@@ -35,6 +36,19 @@ def create_directory(filepath):
     '''
     
     os.mkdir(filepath)
+    
+def create_file(path,name):
+    '''creates an empty .dae file with a specified name in the specified path
+    
+    Parameters
+    path              -- a string containing the path to the directory where the file is to be saved
+    name              -- a string containing the filename of the file to create
+    '''
+    
+    filename = path + "/" + name + ".dae"
+    output_file = open(filename,'wb')
+    output_file.close()
+    
 
 def save_state(path,name):
     ''' exports the current state of the scene to a collada (.dae) file 
@@ -48,7 +62,7 @@ def save_state(path,name):
         create_directory(path) 
     filename = path + "/" + name
     
-    bpy.ops.wm.collada_export(filepath=filename)
+    bpy.ops.wm.collada_export(filepath=filename,triangulate=False)
         
 def load_state(path,name):
     ''' imports a scene from a collada(.dae) file 
@@ -56,6 +70,9 @@ def load_state(path,name):
     Parameters
     path         -- a string that contains the filepath of the folder where the file will be loaded
     name         -- a string that contains the filename of the collada file to load
+    
+    Return Value
+    load_flag    -- a boolean value used to indicate whether a file was loaded (True) or not (False)
     '''
     filename = path + "/" + name + ".dae"
     if os.path.isfile(filename):
@@ -63,6 +80,11 @@ def load_state(path,name):
         bpy.ops.object.select_all(action='SELECT')
         bpy.ops.object.delete()
         bpy.ops.wm.collada_import(filepath=filename)
+        load_flag = True
+    else:
+        load_flag = False
+        
+    return load_flag
         
 def check_file(path,name):
     '''checks if a file exists
@@ -136,4 +158,33 @@ def get_obj_names(target_objects):
         obj_names.append(obj.name)
         
     return obj_names
+
+def get_internals(active_object):
+    '''gets the set of selected vertices, edges and faces
+    
+    Parameters
+    active_object     -- a string containing the name of the object that contains the internals
+    
+    Return Value
+    internals         -- a dictionary object that contains the following:
+        verts         -- a list containing the indices of selected vertices
+        edges         -- a list containing the indices of selected edges
+        faces         -- a list containing the indices of selected faces
+    
+    '''
+    
+    #create a bmesh object to access the internals of the object
+    bm = bmesh.from_edit_mesh(bpy.data.objects[active_object].data)
+    
+    verts = [i.index for i in bm.verts if i.select]
+    edges = [i.index for i in bm.edges if i.select]
+    faces = [i.index for i in bm.faces if i.select]
+    
+    internals = {
+        'verts' : verts,
+        'edges' : edges,
+        'faces' : faces
+    }
+    
+    return internals
     
