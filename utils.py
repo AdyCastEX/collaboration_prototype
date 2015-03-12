@@ -35,7 +35,20 @@ def create_directory(filepath):
     filepath          -- a string containing the filepath of the folder to create
     '''
     
-    os.mkdir(filepath)
+    #convert the string filepath into a path object
+    path = os.path.abspath(filepath)
+    #split the path into a list of directory names
+    path_list = path.split(os.sep)
+    #the path walk will start from the root directory (e.g "C:/" for windows or "/" for linux)
+    path_walk = path_list[0]
+    path_length = len(path_list)
+ 
+    #for each subdirectory from the root, add it to the path walk  
+    for i in range(1,path_length):
+        path_walk += "/" + path_list[i]
+        #if the current subdirectory does not exist, create it
+        if not os.path.isdir(path_walk):
+            os.mkdir(path_walk)
     
 def create_file(path,name):
     '''creates an empty .dae file with a specified name in the specified path

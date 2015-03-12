@@ -135,35 +135,54 @@ class StartSession(bpy.types.Operator):
             ip_addr      -- an arbitrary ip address string assigned by the server
             port         -- an arbitrary port number assigned by the server
         '''
+        try:
+            s = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+            s.connect(server_address)
+            request = {
+                'action' : 'SUBSCRIBE',
+                'ip_addr': '',
+                'port' : '',
+                'filename' : bpy.context.scene.session_name
+            }
+            
+            #send a request to register the user to the list of clients in the server
+            s.sendall(bytes(json.dumps(request),'utf-8'))
+            s.settimeout(5.0)
         
-        s = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
-        s.connect(server_address)
-        request = {
-            'action' : 'SUBSCRIBE',
-            'ip_addr': '',
-            'port' : '',
-            'filename' : bpy.context.scene.session_name
-        }
-        
-        #send a request to register the user to the list of clients in the server
-        s.sendall(bytes(json.dumps(request),'utf-8'))
-        #wait for an acknowledgement from the server
-        reply_bytes = s.recv(4096)
-        s.close()
-        reply = json.loads(reply_bytes.decode('utf-8'))
-        print(reply)
-        
-        result = {
-            'success' : reply['success'],
-            'ip_addr' : reply['ip'],
-            'port'    : reply['port']
-                  
-        }
-        
-        if reply['success'] == True:
-            self.address = (result['ip_addr'],result['port'])
-            self.request_file(server_address)
-            utils.load_state(bpy.context.scene.client_filepath,bpy.context.scene.session_name)
+            #wait for an acknowledgement from the server
+            reply_bytes = s.recv(4096)
+            s.close()
+            reply = json.loads(reply_bytes.decode('utf-8'))
+            print(reply)
+            
+            result = {
+                'success' : reply['success'],
+                'ip_addr' : reply['ip'],
+                'port'    : reply['port']
+                      
+            }
+            
+            if reply['success'] == True:
+                self.address = (result['ip_addr'],result['port'])
+                self.request_file(server_address)
+                utils.load_state(bpy.context.scene.client_filepath,bpy.context.scene.session_name)
+                
+        except TimeoutError:
+            result = {
+                'success' : False,
+                'ip_addr' : '',
+                'port' : ''
+            }
+            print("Connection timed out!")
+            
+        except ConnectionRefusedError:
+            result = {
+                'success' : False,
+                'ip_addr' : '',
+                'port' : ''
+            }
+            print("Connection refused!")
+            
         
         return result
     
