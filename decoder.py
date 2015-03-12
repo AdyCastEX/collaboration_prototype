@@ -48,7 +48,7 @@ class Decoder:
         deselected_faces = []
         
         #create a bmesh to store the edit mode data of the object
-        bm = bmesh.from_edit_mesh(bpy.data.objects[active_object].data)
+        bm = utils.create_bmesh(active_object)
         for i in internals['verts']:
             #do not reselect an vertex if it does not exist (e.g the vertex was deleted)
             try:
