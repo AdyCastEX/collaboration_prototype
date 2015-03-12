@@ -263,6 +263,7 @@ class StartSession(bpy.types.Operator):
                 #if the operation is different from the last one, update the last operation
                 self.last_op = latest_op
                 try:
+                    utils.format_obj_names(".","_")
                     #get the method that matches the name of the last operator
                     encode_function = getattr(self.enc,utils.format_op_name(latest_op.name))
                     mode = bpy.context.mode
@@ -281,6 +282,7 @@ class StartSession(bpy.types.Operator):
                         active_object = ''
                     
                     #execute the method to get an encoded operation
+                    
                     operation = encode_function(latest_op,selected,active_object,mode)
                     if not self.outqueue.full():
                         self.outqueue.put(operation)
@@ -310,6 +312,7 @@ class StartSession(bpy.types.Operator):
             op = self.inqueue.get()
             decode_function = getattr(self.dec,utils.format_op_name(op['name']))
             decode_function(op)
+            utils.format_obj_names(".","_")
             
     def send_operation(self):
         '''gets an operation from the outqueue and sends it to the server'''
