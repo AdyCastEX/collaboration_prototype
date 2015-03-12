@@ -93,6 +93,7 @@ def load_state(path,name):
         bpy.ops.object.select_all(action='SELECT')
         bpy.ops.object.delete()
         bpy.ops.wm.collada_import(filepath=filename)
+        format_obj_names("_",".")
         load_flag = True
     else:
         load_flag = False

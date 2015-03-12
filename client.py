@@ -166,6 +166,7 @@ class StartSession(bpy.types.Operator):
                 self.address = (result['ip_addr'],result['port'])
                 self.request_file(server_address)
                 utils.load_state(bpy.context.scene.client_filepath,bpy.context.scene.session_name)
+                #utils.format_obj_names("_",".")
                 
         except TimeoutError:
             result = {
@@ -263,7 +264,7 @@ class StartSession(bpy.types.Operator):
                 #if the operation is different from the last one, update the last operation
                 self.last_op = latest_op
                 try:
-                    utils.format_obj_names(".","_")
+                    #utils.format_obj_names(".","_")
                     #get the method that matches the name of the last operator
                     encode_function = getattr(self.enc,utils.format_op_name(latest_op.name))
                     mode = bpy.context.mode
@@ -312,7 +313,7 @@ class StartSession(bpy.types.Operator):
             op = self.inqueue.get()
             decode_function = getattr(self.dec,utils.format_op_name(op['name']))
             decode_function(op)
-            utils.format_obj_names(".","_")
+            #utils.format_obj_names(".","_")
             
     def send_operation(self):
         '''gets an operation from the outqueue and sends it to the server'''
