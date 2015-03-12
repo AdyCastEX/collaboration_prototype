@@ -200,4 +200,17 @@ def get_internals(active_object):
     }
     
     return internals
+
+def create_bmesh(object_name):
+    '''creates a bmesh of a given object
+    
+    Parameters
+    object_name      -- a string containing the name of the target object
+    
+    Return Value
+    mesh             -- the created bmesh object
+    '''
+    
+    mesh = bmesh.from_edit_mesh(bpy.data.objects[object_name].data)
+    return mesh
     
