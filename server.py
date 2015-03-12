@@ -42,6 +42,7 @@ class StartServer(bpy.types.Operator):
             load_flag = utils.load_state(bpy.context.scene.server_filepath,bpy.context.scene.session_name)
             if not load_flag:
                 utils.save_state(bpy.context.scene.server_filepath,bpy.context.scene.session_name)
+                utils.load_state(bpy.context.scene.server_filepath,bpy.context.scene.session_name)
             
             #initialize the server
             self.init_server(5050)
@@ -266,6 +267,7 @@ class StartServer(bpy.types.Operator):
             data['operation'] = op
             
             utils.save_state(bpy.context.scene.server_filepath,bpy.context.scene.session_name)
+            #utils.load_state(bpy.context.scene.server_filepath,bpy.context.scene.session_name)
             
             if not self.outqueue.full():
                 self.outqueue.put(data)
@@ -279,6 +281,7 @@ class StartServer(bpy.types.Operator):
         '''
         op_function = getattr(self.dec,utils.format_op_name(op['name']))
         op_function(op)
+        utils.format_obj_names(".","_")
         
     def broadcast_operation(self):
         '''gets an operation from the outqueue and starts a thread for sending data to connected clients

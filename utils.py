@@ -172,6 +172,19 @@ def get_obj_names(target_objects):
         
     return obj_names
 
+def format_obj_names(remove_char,replace_char):
+    '''converts certain charcters to a specified replacement character
+    
+    Parameters
+    remove_char       -- the character to remove
+    replace_char      -- the character that will replace the removed character
+ 
+    '''
+    
+    for obj in bpy.data.objects:
+        while remove_char in obj.name:
+            obj.name = obj.name.replace(remove_char,replace_char)
+            
 def get_internals(active_object):
     '''gets the set of selected vertices, edges and faces
     
