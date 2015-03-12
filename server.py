@@ -281,7 +281,7 @@ class StartServer(bpy.types.Operator):
         '''
         op_function = getattr(self.dec,utils.format_op_name(op['name']))
         op_function(op)
-        utils.format_obj_names(".","_")
+        #utils.format_obj_names(".","_")
         
     def broadcast_operation(self):
         '''gets an operation from the outqueue and starts a thread for sending data to connected clients
