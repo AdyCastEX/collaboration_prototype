@@ -227,4 +227,16 @@ def create_bmesh(object_name):
     
     mesh = bmesh.from_edit_mesh(bpy.data.objects[object_name].data)
     return mesh
+
+def lock_object_selection(excluded_objects,flag):
+    '''locks (or unlocks) all objects from selection, excluding specified objecs
+    
+    Parameters
+    excluded_objects        --a list containing the names of objects not to lock
+    flag                    -- a boolean value representing lock (True) and unlock (False)
+    '''
+    
+    for obj in bpy.data.objects:
+        if obj.name not in excluded_objects:
+            obj.hide_select = flag
     

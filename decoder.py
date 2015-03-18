@@ -158,6 +158,7 @@ class Decoder:
             internals = {'verts': op['verts'], 'edges' : op['edges'], 'faces' : op['faces']}
             self.refocus_edit_mode(op['active_object'],internals,True)
             
+        utils.lock_object_selection(op['targets'],True)
         focus = {
             'selected' : current_selected,
             'active' : current_active,
@@ -180,6 +181,7 @@ class Decoder:
         
         '''
         current_mode = bpy.context.mode
+        utils.lock_object_selection([],False)
         
         try:
             #if the operation was for OBJECT mode, deselect the objects that were selected for the received operation
