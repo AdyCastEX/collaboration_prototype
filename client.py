@@ -71,6 +71,13 @@ class StartSession(bpy.types.Operator):
         if bpy.context.scene.modal_flag == False:
             self.unbind_listener()
             bpy.context.scene.thread_flag = False
+            #get the last operator and encode it using the appropriate encode function
+            last_op = bpy.context.active_operator
+            encode_function = getattr(self.enc,utils.format_op_name(last_op.name))
+            empty_targets = {'objects':[],'verts':[],'edges':[],'faces':[]}
+            bpy.context.scene.last_op = json.dumps(encode_function(last_op,empty_targets,'',bpy.context.mode))
+            #reset the encode flag to false
+            bpy.context.scene.encode_flag = False
             return {'FINISHED'}
         
         elif event.type in ('LEFTMOUSE','RIGHTMOUSE','ENTER'):
@@ -259,37 +266,56 @@ class StartSession(bpy.types.Operator):
             latest_op = bpy.context.active_operator
             #latest_op = bpy.context.window_manager.operators[-1]
             
-            #check first if the opeation has not been encoded before to prevent unnecessary doubling
-            if latest_op != self.last_op:
-                #if the operation is different from the last one, update the last operation
-                self.last_op = latest_op
+            #check if the encoder is clear to encode
+            if bpy.context.scene.encode_flag == True:
+                #check first if the opeation has not been encoded before to prevent unnecessary doubling
+                if latest_op != self.last_op:
+                    #if the operation is different from the last one, update the last operation
+                    self.last_op = latest_op
+                    try:
+                        #utils.format_obj_names(".","_")
+                        #get the method that matches the name of the last operator
+                        encode_function = getattr(self.enc,utils.format_op_name(latest_op.name))
+                        mode = bpy.context.mode
+                        selected = {}
+                        if bpy.context.selected_objects != []:
+                            selected['objects'] = utils.get_obj_names(bpy.context.selected_objects)
+                        
+                        if bpy.context.active_object != None:
+                            active_object = bpy.context.active_object.name
+                            if mode in ('EDIT_MESH'):
+                                internals = utils.get_internals(bpy.context.active_object.name)
+                                selected['verts'] = internals['verts']
+                                selected['edges'] = internals['edges']
+                                selected['faces'] = internals['faces']
+                        else:
+                            active_object = ''
+                        
+                        #execute the method to get an encoded operation
+                        operation = encode_function(latest_op,selected,active_object,mode)
+                        if not self.outqueue.full():
+                            self.outqueue.put(operation)
+                            #bpy.context.scene.last_op = json.dumps(operation)
+                        print(operation)
+                    except AttributeError:
+                        print("operation not supported")
+                        
+            #if the enoder is not clear to encode, check for clear condition
+            elif bpy.context.scene.encode_flag == False:
+                #get the current active operator and encode using the appropriate encode function
+                curr_op = bpy.context.active_operator
+                encode_function = getattr(self.enc,utils.format_op_name(curr_op.name))
+                empty_targets = {'objects':[],'verts':[],'edges':[],'faces':[]}
                 try:
-                    #utils.format_obj_names(".","_")
-                    #get the method that matches the name of the last operator
-                    encode_function = getattr(self.enc,utils.format_op_name(latest_op.name))
-                    mode = bpy.context.mode
-                    selected = {}
-                    if bpy.context.selected_objects != []:
-                        selected['objects'] = utils.get_obj_names(bpy.context.selected_objects)
-                    
-                    if bpy.context.active_object != None:
-                        active_object = bpy.context.active_object.name
-                        if mode in ('EDIT_MESH'):
-                            internals = utils.get_internals(bpy.context.active_object.name)
-                            selected['verts'] = internals['verts']
-                            selected['edges'] = internals['edges']
-                            selected['faces'] = internals['faces']
-                    else:
-                        active_object = ''
-                    
-                    #execute the method to get an encoded operation
-                    
-                    operation = encode_function(latest_op,selected,active_object,mode)
-                    if not self.outqueue.full():
-                        self.outqueue.put(operation)
-                    print(operation)
-                except AttributeError:
-                    print("operation not supported")
+                    #if there was a last operation (string form), convert to dict
+                    last_op = json.loads(bpy.context.scene.last_op)
+                except ValueError:
+                    #if there was no last operation, just set to empty dict since json cannot decode empty strings
+                    last_op = {}
+                
+                #to prevent unncessary encodes when a user rejoins a session, set the encode flag to true only when a new operation is added
+                if not utils.op_equivalent(last_op,encode_function(curr_op,empty_targets,'',bpy.context.mode)):
+                    bpy.context.scene.encode_flag = True
         
     def call_encoder(self):
         '''keeps track of selected objects/internals (mostly for backtracking in delete) and calls the encoder'''

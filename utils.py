@@ -239,4 +239,23 @@ def lock_object_selection(excluded_objects,flag):
     for obj in bpy.data.objects:
         if obj.name not in excluded_objects:
             obj.hide_select = flag
+            
+            
+def op_equivalent(op1,op2):
+    '''checks if two operations are equivalent
+    
+    Parameters
+    op1       -- a dict object representing the first operation
+    op2       -- a dict object representing the second operation
+    
+    Return Value
+    equivalence  -- a boolean value that indicates if the operations are equivalent (True) or not (False)
+    '''
+    
+    if op1 == op2:
+        equivalence = True
+    else:
+        equivalence = False
+        
+    return equivalence
     
