@@ -71,6 +71,8 @@ def register():
     bpy.types.Scene.server_filepath = bpy.props.StringProperty(default = utils.format_file_path(utils.get_file_path())+"/files/server")
     bpy.types.Scene.client_filepath = bpy.props.StringProperty(default = utils.format_file_path(utils.get_file_path())+"/files/client")
     bpy.types.Scene.session_name = bpy.props.StringProperty(default = "sample")
+    bpy.types.Scene.encode_flag = bpy.props.BoolProperty(default=False)
+    bpy.types.Scene.last_op = bpy.props.StringProperty(default= "")
 
 def unregister():
     '''unregisters all classes in this module'''
@@ -84,6 +86,8 @@ def unregister():
     del bpy.types.Scene.selected_internals
     del bpy.types.Scene.server_filepath
     del bpy.types.Scene.session_name
+    del bpy.types.Scene.encode_flag
+    del bpy.types.Scene.last_op
     
 #--- ### Main code
 if __name__ == '__main__':
