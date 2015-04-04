@@ -173,7 +173,31 @@ def get_obj_names(target_objects):
         
     return obj_names
 
+def get_obj_index(name,mode,collection):
+    '''gets the index of a particular object in the scene
+    
+    Parameters
+    name           -- the name of the object or type of object (e.g. Cube, Sphere, Monkey)
+    mode           -- an integer value representing the mode of traversal (0 -> from index 0..n-1, 1 -> from index n-1..0)
+    collection     -- an array of objects to traverse
+    
+    Return Value
+    index          -- the integer index of the object
+    '''
+    
+    n = len(collection)
+    
+    for i in range(0,n):
+        if name in collection[i].name and mode == 0:
+            index = i
+            return index
+        elif name in collection[n-1-i].name and mode == 1:
+            index = n-1-i
+            return index
+        
+
 def format_obj_names(remove_char,replace_char):
+
     '''converts certain charcters to a specified replacement character
     
     Parameters
@@ -185,6 +209,41 @@ def format_obj_names(remove_char,replace_char):
     for obj in bpy.data.objects:
         while remove_char in obj.name:
             obj.name = obj.name.replace(remove_char,replace_char)
+
+def shift_name(name,concat_char,distance,max_num):
+    '''shifts numbered object names (e.g. Cube.001) by a certain increment/decrement
+    
+    Parameters
+    name          -- the original name (string) of the object
+    concat_car    -- character to use when concatenating two strings
+    distance      -- an int value that indicates how far to increment/decrement
+    max_num       -- the maximum number that can be attached to the name
+    
+    Return value
+    shifted_name  -- the shifted name (string)
+    '''
+    
+    #ASSUMPTION: the name consists of only two parts {"Cube","001"} separated by '.'
+    split_name = name.split(".")
+    try:
+        #convert the number_part (str) into an int
+        number_part = int(split_name[1])
+        #increment/decrement by the distance
+        number_part += distance
+    #this error will be raised in cases where there is no number part (e.g. "Cube","Sphere")
+    except IndexError:
+        #set to the max num (e.g Cube becomes Cube.003)
+        number_part = max_num
+        
+    if number_part != 0:
+        #convert the number part (int) to a string with leading zeroes (e.g. 5 becomes "005")
+        number_part = str(number_part).zfill(3)
+        #concatenate back with the concat_char instead of '.'
+        shifted_name = split_name[0] + concat_char + number_part
+    elif number_part == 0:
+        shifted_name = split_name[0]
+
+    return shifted_name
             
 def get_internals(active_object):
     '''gets the set of selected vertices, edges and faces
