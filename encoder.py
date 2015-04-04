@@ -1,5 +1,6 @@
 import bpy
 import json
+from . import utils
 
 class Encoder:
     
@@ -131,3 +132,13 @@ class Encoder:
         '''creates an operation with attributes specific to adding a primitive torus object '''
         op = self.add_generic_object(operator, target_objects, active_object, mode)
         return op    
+    
+    def rename_objects(self,active_object,collection):
+        start_index = utils.get_obj_index(active_object,0,collection)
+        #set only the object type (e.g. Cube, Sphere, Cone) as the target object for finding the end index
+        end_index = utils.get_obj_index(active_object.split(".")[0],1,collection)
+        #slice the list based on the start index and end index
+        target_objects = {}
+        target_objects['objects'] = utils.get_obj_names(collection[start_index:end_index+1])
+        op = self.create_generic_operation('Rename Objects',target_objects,'','NONE')
+        return op

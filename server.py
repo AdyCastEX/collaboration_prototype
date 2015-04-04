@@ -21,6 +21,7 @@ class StartServer(bpy.types.Operator):
     clients     -- a list containing the addresses of the clients
     addr        -- a tuple containing the ip address and port of the server socket
     dec         -- a decoder object used to run operations
+    enc         -- an encoder object used to create operations
     inqueue     -- a Queue object that stores received operations
     outqueue    -- a Queue object that stores operations to send to clients
     '''
@@ -36,6 +37,7 @@ class StartServer(bpy.types.Operator):
             #attribute initializations
             self.clients = []
             self.dec = decoder.Decoder()
+            self.enc = encoder.Encoder()
             self.inqueue = queue.Queue(30)
             self.outqueue = queue.Queue(30)
             
@@ -154,21 +156,31 @@ class StartServer(bpy.types.Operator):
             except OSError:
                 pass
     
-    def client_thread(self,data,sender):
+    def client_thread(self,data_bytes,sender):
         ''' broadcasts data to all connected clients except for the sender
         
         Parameters
-        data -- the data to send in bytes format
+        data_bytes -- the data to send in bytes format
         sender -- a tuple containing the ip address and port of the sender
         '''
         
-        print(data)
+        print(data_bytes)
+        data = json.loads(data_bytes.decode('utf-8'))
         for client in self.clients:
             #no need to send data to the node that sent the data
             if client == sender:
-                continue
+                target_obj = data['operation']['active_object']
+                if "add" in utils.format_op_name(data['operation']['name']) and target_obj in bpy.data.objects: 
+                    rename_op = self.enc.rename_objects(target_obj,bpy.data.objects)
+                    print(rename_op)
+                    rename_data = {}
+                    rename_data['operation'] = rename_op
+                    self.send_data(bytes(json.dumps(rename_data),'utf-8'),client)
+
+                else: 
+                    continue
             
-            self.send_data(data,client)
+            self.send_data(data_bytes,client)
             
     def subscribe_thread(self,sender,addr,data):
         '''add a node to the list of clients and return an acknowledgement of success
@@ -294,7 +306,6 @@ class StartServer(bpy.types.Operator):
             t = threading.Thread(target=self.client_thread,args=(data,sender))
             t.start()
             
-    
                 
 class StopServer(bpy.types.Operator):
     '''stops a collaboration server '''

@@ -359,3 +359,14 @@ class Decoder:
         
         self.return_focus(op, previous_selected)
         
+    def rename_objects(self,op):
+        
+        objects = op['targets']['objects']
+        max_num = len(objects)-1
+        
+        for obj in objects:
+            obj_name = bpy.data.objects[obj].name
+            bpy.data.objects[obj].name = utils.shift_name(obj_name,'_',-1,max_num)
+            
+        utils.format_obj_names('_','.')
+        
