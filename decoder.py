@@ -361,7 +361,7 @@ class Decoder:
         
     def rename_objects(self,op):
         
-        objects = op['targets']['objects']
+        objects = op['targets']
         max_num = len(objects)-1
         
         for obj in objects:
