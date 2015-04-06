@@ -71,8 +71,8 @@ class StartServer(bpy.types.Operator):
         
         if event.type in ('TIMER'):
             #print("timer")
-            self.process_operation()
-            self.broadcast_operation()
+            conflict_flag = self.process_operation()
+            self.broadcast_operation(conflict_flag)
             
         return {'PASS_THROUGH'}
     
@@ -156,12 +156,13 @@ class StartServer(bpy.types.Operator):
             except OSError:
                 pass
     
-    def client_thread(self,data_bytes,sender):
+    def client_thread(self,data_bytes,sender,conflict_flag):
         ''' broadcasts data to all connected clients except for the sender
         
         Parameters
-        data_bytes -- the data to send in bytes format
-        sender -- a tuple containing the ip address and port of the sender
+        data_bytes      -- the data to send in bytes format
+        sender          -- a tuple containing the ip address and port of the sender
+        conflict_flag   -- a boolean value that indicates the presence (True) or absence (False) of a conflicting operation
         '''
         
         print(data_bytes)
@@ -169,8 +170,7 @@ class StartServer(bpy.types.Operator):
         for client in self.clients:
             #no need to send data to the node that sent the data
             if client == sender:
-                target_obj = data['operation']['active_object']
-                if "add" in utils.format_op_name(data['operation']['name']) and target_obj in bpy.data.objects: 
+                if conflict_flag == True: 
                     rename_op = self.enc.rename_objects(target_obj,bpy.data.objects)
                     print(rename_op)
                     rename_data = {}
@@ -268,12 +268,23 @@ class StartServer(bpy.types.Operator):
         s.close()
         
     def process_operation(self):
-        '''performs the necessary processing of an operation on the server's instance of the collaborative session'''
+        '''performs the necessary processing of an operation on the server's instance of the collaborative session
+        
+        
+        Return Value
+        conflict_flag      -- a boolean value used to indicate the presence (True) or absence (False) of a conflicting operation (can also be None)
+        '''
         if not self.inqueue.empty():
             data = self.inqueue.get()
             op = data['operation']
             
             #Operational Transformation goes here
+            target_obj = op['active_object']
+            if "add" in utils.format_op_name(op['name']) and target_obj in bpy.data.objects:
+                conflict_flag = True
+                
+            else:
+                conflict_flag = False
             
             self.execute_operation(op)
             data['operation'] = op
@@ -283,6 +294,8 @@ class StartServer(bpy.types.Operator):
             
             if not self.outqueue.full():
                 self.outqueue.put(data)
+                
+            return conflict_flag
         
     def execute_operation(self,op):
         ''' execute the operation on the server's instance of the collaborative session
@@ -295,15 +308,17 @@ class StartServer(bpy.types.Operator):
         op_function(op)
         #utils.format_obj_names(".","_")
         
-    def broadcast_operation(self):
+    def broadcast_operation(self,conflict_flag):
         '''gets an operation from the outqueue and starts a thread for sending data to connected clients
         
+        Parameters
+        conflict_flag     -- a boolean value that indicates the presence (True) or absence (False) of a conflicting operation
         '''
         if not self.outqueue.empty():
             data_json = self.outqueue.get()
             sender = (data_json['ip_addr'],data_json['port'])
             data = bytes(json.dumps(data_json),'utf-8')
-            t = threading.Thread(target=self.client_thread,args=(data,sender))
+            t = threading.Thread(target=self.client_thread,args=(data,sender,conflict_flag))
             t.start()
             
                 
