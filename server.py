@@ -171,7 +171,7 @@ class StartServer(bpy.types.Operator):
             #no need to send data to the node that sent the data
             if client == sender:
                 if conflict_flag == True: 
-                    rename_op = self.enc.rename_objects(target_obj,bpy.data.objects)
+                    rename_op = self.enc.rename_objects(data['op']['active_object'],bpy.data.objects)
                     print(rename_op)
                     rename_data = {}
                     rename_data['operation'] = rename_op
