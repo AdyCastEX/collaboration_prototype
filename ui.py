@@ -18,6 +18,12 @@ class CollaborationPanel(bpy.types.Panel):
         
         if sceneprops.mode == "CLIENT":
             row = layout.row()
+            row.label(text="STATUS : ")
+            if bpy.context.scene.modal_flag == True:
+                row.label(text="ONLINE")
+            elif bpy.context.scene.modal_flag == False:
+                row.label(text="OFFLINE")
+            row = layout.row()
             row.prop(sceneprops,"client_filepath",text='Filepath')
             row = layout.row()
             row.prop(sceneprops,"session_name",text="Session")
@@ -34,7 +40,17 @@ class CollaborationPanel(bpy.types.Panel):
             #a button that calls bpy.ops.development.end_session()
             row.operator("development.end_session")
             
+            
         elif sceneprops.mode == "SERVER":
+            row = layout.row()
+            row.label(text="STATUS : ")
+            if bpy.context.scene.modal_flag == True:
+                row.label(text="ONLINE")
+            elif bpy.context.scene.modal_flag == False:
+                row.label(text="OFFLINE")
+            row = layout.row()
+            row.label(text="PORT : ")
+            row.label(text=str(bpy.context.scene.server_port))
             row = layout.row()
             row.prop(sceneprops,"session_name",text="Session")
             row = layout.row()
