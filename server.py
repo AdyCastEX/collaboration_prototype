@@ -99,6 +99,7 @@ class StartServer(bpy.types.Operator):
             except OSError:
                 temp_port+=1        
         self.addr = self.servsock.getsockname()
+        bpy.context.scene.server_port = temp_port
         
     def close_server(self):
         ''' close a server '''
@@ -171,7 +172,7 @@ class StartServer(bpy.types.Operator):
             #no need to send data to the node that sent the data
             if client == sender:
                 if conflict_flag == True: 
-                    rename_op = self.enc.rename_objects(data['op']['active_object'],bpy.data.objects)
+                    rename_op = self.enc.rename_objects(data['operation']['active_object'],bpy.data.objects)
                     print(rename_op)
                     rename_data = {}
                     rename_data['operation'] = rename_op
@@ -191,8 +192,8 @@ class StartServer(bpy.types.Operator):
         data    -- a dict object that contains data received from a node
         '''
         
-        #if the requested file/session exists, add the user to the list of clients and send a success acknowledgement
-        if utils.check_file(bpy.context.scene.server_filepath,data['filename']):
+        #if the requested file/session exists and is the currently active session, add the user to the list of clients and send a success acknowledgement
+        if utils.check_file(bpy.context.scene.server_filepath,data['filename']) and data['filename'] == bpy.context.scene.session_name:
             self.clients.append(addr)
             print(self.clients)
             ack = {
@@ -201,8 +202,8 @@ class StartServer(bpy.types.Operator):
                 'port' : addr[1]
             }
             
-        #if the requested file/session does not exist, do not add the user to the list and send a failure acknowledgement
-        elif not utils.check_file(bpy.context.scene.server_filepath,data['filename']):
+        #if the requested file/session does not exist or is not active, do not add the user to the list and send a failure acknowledgement
+        elif not utils.check_file(bpy.context.scene.server_filepath,data['filename']) or data['filename'] != bpy.context.scene.session_name:
             print(self.clients)
             ack = {
                 'success' : False,
