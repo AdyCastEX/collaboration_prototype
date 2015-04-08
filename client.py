@@ -183,6 +183,7 @@ class StartSession(bpy.types.Operator):
                 'port' : ''
             }
             print("Connection timed out!")
+            self.report('ERROR',"Connection timed out!")
             
         except ConnectionRefusedError:
             result = {
@@ -203,15 +204,20 @@ class StartSession(bpy.types.Operator):
         
         '''
         s = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
-        s.connect(server_address)
-        request = {
-            'action' : 'UNSUBSCRIBE',
-            'ip_addr' : self.address[0],
-            'port' : self.address[1]
-        }
-        
-        s.sendall(bytes(json.dumps(request),'utf-8'))
-        reply_bytes = s.recv(4096)
+        try:
+            s.connect(server_address)
+            request = {
+                'action' : 'UNSUBSCRIBE',
+                'ip_addr' : self.address[0],
+                'port' : self.address[1]
+            }
+            s.settimeout(5.0)
+            s.sendall(bytes(json.dumps(request),'utf-8'))
+            reply_bytes = s.recv(4096)
+        except TimeoutError:
+            print("Connection timed out!")
+        except ConnectionRefusedError:
+            print("Connection refused!")
         s.close()
         
     def request_file(self,server_address):

@@ -273,6 +273,7 @@ class Decoder:
         
         loc = (op['loc_x'],op['loc_y'],op['loc_z'])
         bpy.ops.mesh.primitive_cube_add(location=loc)
+        bpy.context.active_object.name = op['active_object']
         
         self.return_focus(op, previous_selected)
         

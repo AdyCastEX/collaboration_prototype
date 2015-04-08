@@ -7,6 +7,7 @@ import os
 from . import encoder
 from . import decoder
 from . import utils
+from . import transformer
 
 class StartServer(bpy.types.Operator):
     '''starts a persistent collaboration server'''
@@ -22,6 +23,7 @@ class StartServer(bpy.types.Operator):
     addr        -- a tuple containing the ip address and port of the server socket
     dec         -- a decoder object used to run operations
     enc         -- an encoder object used to create operations
+    transformer -- a transformer object used to modify operations
     inqueue     -- a Queue object that stores received operations
     outqueue    -- a Queue object that stores operations to send to clients
     '''
@@ -38,6 +40,7 @@ class StartServer(bpy.types.Operator):
             self.clients = []
             self.dec = decoder.Decoder()
             self.enc = encoder.Encoder()
+            self.transformer = transformer.Transformer()
             self.inqueue = queue.Queue(30)
             self.outqueue = queue.Queue(30)
             
@@ -171,15 +174,7 @@ class StartServer(bpy.types.Operator):
         for client in self.clients:
             #no need to send data to the node that sent the data
             if client == sender:
-                if conflict_flag == True: 
-                    rename_op = self.enc.rename_objects(data['operation']['active_object'],bpy.data.objects)
-                    print(rename_op)
-                    rename_data = {}
-                    rename_data['operation'] = rename_op
-                    self.send_data(bytes(json.dumps(rename_data),'utf-8'),client)
-
-                else: 
-                    continue
+                continue
             
             self.send_data(data_bytes,client)
             
@@ -281,11 +276,8 @@ class StartServer(bpy.types.Operator):
             
             #Operational Transformation goes here
             target_obj = op['active_object']
-            if "add" in utils.format_op_name(op['name']) and target_obj in bpy.data.objects:
-                conflict_flag = True
-                
-            else:
-                conflict_flag = False
+            if "add" in utils.format_op_name(op['name']):
+                op = self.transformer.add(op)
             
             self.execute_operation(op)
             data['operation'] = op
@@ -296,7 +288,7 @@ class StartServer(bpy.types.Operator):
             if not self.outqueue.full():
                 self.outqueue.put(data)
                 
-            return conflict_flag
+            return True
         
     def execute_operation(self,op):
         ''' execute the operation on the server's instance of the collaborative session
