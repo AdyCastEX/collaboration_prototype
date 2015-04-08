@@ -283,7 +283,7 @@ class Decoder:
         
         loc = (op['loc_x'],op['loc_y'],op['loc_z'])
         bpy.ops.mesh.primitive_circle_add(location=loc)
-        
+        bpy.context.active_object.name = op['active_object']
         self.return_focus(op, previous_selected)
     
     def add_plane(self,op):
@@ -291,7 +291,7 @@ class Decoder:
         
         loc = (op['loc_x'],op['loc_y'],op['loc_z'])
         bpy.ops.mesh.primitive_plane_add(location=loc)
-        
+        bpy.context.active_object.name = op['active_object']
         self.return_focus(op, previous_selected)
     
     def add_uv_sphere(self,op):
@@ -299,7 +299,7 @@ class Decoder:
         
         loc = (op['loc_x'],op['loc_y'],op['loc_z'])
         bpy.ops.mesh.primitive_uv_sphere_add(location=loc)
-        
+        bpy.context.active_object.name = op['active_object']
         self.return_focus(op, previous_selected)
     
     def add_ico_sphere(self,op):
@@ -307,7 +307,7 @@ class Decoder:
         
         loc = (op['loc_x'],op['loc_y'],op['loc_z'])
         bpy.ops.mesh.primitive_ico_sphere_add(location=loc)
-        
+        bpy.context.active_object.name = op['active_object']
         self.return_focus(op, previous_selected)
     
     def add_cylinder(self,op):
@@ -315,7 +315,7 @@ class Decoder:
         
         loc = (op['loc_x'],op['loc_y'],op['loc_z'])
         bpy.ops.mesh.primitive_cylinder_add(location=loc)
-        
+        bpy.context.active_object.name = op['active_object']
         self.return_focus(op, previous_selected)
     
     def add_cone(self,op):
@@ -323,7 +323,7 @@ class Decoder:
         
         loc = (op['loc_x'],op['loc_y'],op['loc_z'])
         bpy.ops.mesh.primitive_cone_add(location=loc)
-        
+        bpy.context.active_object.name = op['active_object']
         self.return_focus(op, previous_selected)
     
     def add_grid(self,op):
@@ -331,7 +331,7 @@ class Decoder:
         
         loc = (op['loc_x'],op['loc_y'],op['loc_z'])
         bpy.ops.mesh.primitive_grid_add(location=loc)
-        
+        bpy.context.active_object.name = op['active_object']
         self.return_focus(op, previous_selected)
 
     def add_monkey(self,op):
@@ -339,7 +339,7 @@ class Decoder:
         
         loc = (op['loc_x'],op['loc_y'],op['loc_z'])
         bpy.ops.mesh.primitive_monkey_add(location=loc)
-        
+        bpy.context.active_object.name = op['active_object']
         self.return_focus(op, previous_selected)
         
     def add_torus(self,op):
@@ -347,7 +347,7 @@ class Decoder:
         
         loc = (op['loc_x'],op['loc_y'],op['loc_z'])
         bpy.ops.mesh.primitive_torus_add(location=loc)
-        
+        bpy.context.active_object.name = op['active_object']
         self.return_focus(op, previous_selected)
         
     def delete(self,op):
