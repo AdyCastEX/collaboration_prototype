@@ -309,10 +309,7 @@ class StartSession(bpy.types.Operator):
                         
             #if the enoder is not clear to encode, check for clear condition
             elif bpy.context.scene.encode_flag == False:
-                #get the current active operator and encode using the appropriate encode function
-                curr_op = bpy.context.active_operator
-                encode_function = getattr(self.enc,utils.format_op_name(curr_op.name))
-                empty_targets = {'objects':[],'verts':[],'edges':[],'faces':[]}
+                
                 try:
                     #if there was a last operation (string form), convert to dict
                     last_op = json.loads(bpy.context.scene.last_op)
@@ -320,9 +317,16 @@ class StartSession(bpy.types.Operator):
                     #if there was no last operation, just set to empty dict since json cannot decode empty strings
                     last_op = {}
                 
-                #to prevent unncessary encodes when a user rejoins a session, set the encode flag to true only when a new operation is added
-                if not utils.op_equivalent(last_op,encode_function(curr_op,empty_targets,'',bpy.context.mode)):
-                    bpy.context.scene.encode_flag = True
+                try:
+                    #get the current active operator and encode using the appropriate encode function
+                    curr_op = bpy.context.active_operator
+                    encode_function = getattr(self.enc,utils.format_op_name(curr_op.name))
+                    empty_targets = {'objects':[],'verts':[],'edges':[],'faces':[]}
+                    #to prevent unncessary encodes when a user rejoins a session, set the encode flag to true only when a new operation is added
+                    if not utils.op_equivalent(last_op,encode_function(curr_op,empty_targets,'',bpy.context.mode)):
+                        bpy.context.scene.encode_flag = True
+                except AttributeError:
+                    pass
         
     def call_encoder(self):
         '''keeps track of selected objects/internals (mostly for backtracking in delete) and calls the encoder'''

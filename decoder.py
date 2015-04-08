@@ -100,7 +100,10 @@ class Decoder:
            internals      -- a dictionary object containing lists of indices of selected vertices, edges and faces
         '''
         
-        current_active = bpy.context.active_object.name
+        if bpy.context.active_object != None:
+            current_active = bpy.context.active_object.name
+        else:
+            current_active = ''
         current_mode = bpy.context.mode
         current_selected = ''
         current_internals = ''
