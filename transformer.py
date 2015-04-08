@@ -23,10 +23,9 @@ class Transformer:
             new_name = obj_type
             num_id = 1
             while new_name in bpy.data.objects:
-                new_name = new_name + str(num_id).zfill(3)
+                new_name = new_name + "." + str(num_id).zfill(3)
                 num_id += 1
-                
-                
+
             op['active_object'] = new_name
             
         return op
