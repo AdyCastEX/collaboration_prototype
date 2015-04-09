@@ -115,7 +115,7 @@ class Decoder:
             
         #deselect internals if in edit mode
         elif current_mode in ('EDIT_MESH'):
-            selected_internals = utils.get_internals(current_active)
+            selected_internals = utils.get_internals(current_active,utils.get_select_mode())
             current_internals = self.refocus_edit_mode(current_active,selected_internals,False)
         
         #if the mode of the received operation is different from the current mode, shift the mode
@@ -133,7 +133,7 @@ class Decoder:
                 
             #from OBJECT to EDIT_MESH - deselect currently selected internals as well
             elif new_mode in ('EDIT_MESH'):
-                selected_internals = utils.get_internals(current_active)
+                selected_internals = utils.get_internals(current_active,utils.get_select_mode())
                 current_internals = self.refocus_edit_mode(current_active,selected_internals,False)
                 
         #if the mode of the received operation is OBJECT, move the selection of objects selected in the operation

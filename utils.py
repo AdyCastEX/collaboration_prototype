@@ -245,11 +245,12 @@ def shift_name(name,concat_char,distance,max_num):
 
     return shifted_name
             
-def get_internals(active_object):
+def get_internals(active_object,select_mode):
     '''gets the set of selected vertices, edges and faces
     
     Parameters
     active_object     -- a string containing the name of the object that contains the internals
+    select_mode       -- a dictionary of three boolean values indicating the selection mode    
     
     Return Value
     internals         -- a dictionary object that contains the following:
@@ -262,9 +263,16 @@ def get_internals(active_object):
     #create a bmesh object to access the internals of the object
     bm = bmesh.from_edit_mesh(bpy.data.objects[active_object].data)
     
-    verts = [i.index for i in bm.verts if i.select]
-    edges = [i.index for i in bm.edges if i.select]
-    faces = [i.index for i in bm.faces if i.select]
+    verts = []
+    edges = []
+    faces = []
+    
+    if select_mode['vertex_select'] == True:
+        verts = [i.index for i in bm.verts if i.select]
+    if select_mode['edge_select'] == True:
+        edges = [i.index for i in bm.edges if i.select]
+    if select_mode['face_select'] == True:
+        faces = [i.index for i in bm.faces if i.select]
     
     internals = {
         'verts' : verts,
@@ -317,4 +325,13 @@ def op_equivalent(op1,op2):
         equivalence = False
         
     return equivalence
+
+def get_select_mode():
     
+    mode = {}
+    
+    mode['vertex_select'] = bpy.context.tool_settings.mesh_select_mode[0]
+    mode['edge_select'] = bpy.context.tool_settings.mesh_select_mode[1]
+    mode['face_select'] = bpy.context.tool_settings.mesh_select_mode[2]
+    
+    return mode

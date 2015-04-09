@@ -75,7 +75,7 @@ class StartSession(bpy.types.Operator):
             last_op = bpy.context.active_operator
             if last_op != None:
                 encode_function = getattr(self.enc,utils.format_op_name(last_op.name))
-                empty_targets = {'objects':[],'verts':[],'edges':[],'faces':[]}
+                empty_targets = {'objects':[],'verts':[],'edges':[],'faces':[],'selected_mode':''}
                 bpy.context.scene.last_op = json.dumps(encode_function(last_op,empty_targets,'',bpy.context.mode))
             #reset the encode flag to false
             bpy.context.scene.encode_flag = False
@@ -291,10 +291,12 @@ class StartSession(bpy.types.Operator):
                         if bpy.context.active_object != None:
                             active_object = bpy.context.active_object.name
                             if mode in ('EDIT_MESH'):
-                                internals = utils.get_internals(bpy.context.active_object.name)
+                                select_mode = utils.get_select_mode()
+                                internals = utils.get_internals(bpy.context.active_object.name,select_mode)
                                 selected['verts'] = internals['verts']
                                 selected['edges'] = internals['edges']
                                 selected['faces'] = internals['faces']
+                                selected['select_mode'] = select_mode
                         else:
                             active_object = ''
                         
@@ -321,7 +323,7 @@ class StartSession(bpy.types.Operator):
                     #get the current active operator and encode using the appropriate encode function
                     curr_op = bpy.context.active_operator
                     encode_function = getattr(self.enc,utils.format_op_name(curr_op.name))
-                    empty_targets = {'objects':[],'verts':[],'edges':[],'faces':[]}
+                    empty_targets = {'objects':[],'verts':[],'edges':[],'faces':[],'select_mode':''}
                     #to prevent unncessary encodes when a user rejoins a session, set the encode flag to true only when a new operation is added
                     if not utils.op_equivalent(last_op,encode_function(curr_op,empty_targets,'',bpy.context.mode)):
                         bpy.context.scene.encode_flag = True
@@ -334,7 +336,7 @@ class StartSession(bpy.types.Operator):
             selected_objects = utils.get_obj_names(bpy.context.selected_objects)
             bpy.context.scene.active_obj_name = json.dumps(selected_objects)
             if bpy.context.mode in ('EDIT_MESH'):
-                selected_internals = utils.get_internals(bpy.context.active_object.name)
+                selected_internals = utils.get_internals(bpy.context.active_object.name,utils.get_select_mode())
                 #update the last selected internals only if not empty to avoid select mismatches on delete
                 if selected_internals['verts'] != [] or selected_internals['edges'] != [] or selected_internals['faces'] != []:
                     bpy.context.scene.selected_internals = json.dumps(selected_internals)
