@@ -90,6 +90,9 @@ def load_state(path,name):
     filename = path + "/" + name + ".dae"
     if os.path.isfile(filename):
         #clear the scene to remove objects that are not part of the state to load
+        if bpy.context.mode in ('EDIT_MESH'):
+            #move to object mode to properly select all objects
+            bpy.ops.object.editmode_toggle()
         bpy.ops.object.select_all(action='SELECT')
         bpy.ops.object.delete()
         bpy.ops.wm.collada_import(filepath=filename)
@@ -245,12 +248,12 @@ def shift_name(name,concat_char,distance,max_num):
 
     return shifted_name
             
-def get_internals(active_object,select_mode):
+def get_internals(active_object,select_mode={'vertex_select':True,'edge_select':True,'face_select':True}):
     '''gets the set of selected vertices, edges and faces
     
     Parameters
     active_object     -- a string containing the name of the object that contains the internals
-    select_mode       -- a dictionary of three boolean values indicating the selection mode    
+    select_mode       -- a dictionary of three boolean values indicating the selection mode (default -> select verts,edges and faces)
     
     Return Value
     internals         -- a dictionary object that contains the following:

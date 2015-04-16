@@ -74,9 +74,12 @@ class StartSession(bpy.types.Operator):
             #get the last operator and encode it using the appropriate encode function
             last_op = bpy.context.active_operator
             if last_op != None:
-                encode_function = getattr(self.enc,utils.format_op_name(last_op.name))
-                empty_targets = {'objects':[],'verts':[],'edges':[],'faces':[],'selected_mode':''}
-                bpy.context.scene.last_op = json.dumps(encode_function(last_op,empty_targets,'',bpy.context.mode))
+                try:
+                    encode_function = getattr(self.enc,utils.format_op_name(last_op.name))
+                    empty_targets = {'objects':[],'verts':[],'edges':[],'faces':[],'select_mode':''}
+                    bpy.context.scene.last_op = json.dumps(encode_function(last_op,empty_targets,'',bpy.context.mode))
+                except AttributeError:
+                    print("operation not supported")
             #reset the encode flag to false
             bpy.context.scene.encode_flag = False
             return {'FINISHED'}

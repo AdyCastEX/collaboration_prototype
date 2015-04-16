@@ -68,7 +68,7 @@ class Encoder:
                 selected_objects['verts'] = internals['verts']
                 selected_objects['edges'] = internals['edges']
                 selected_objects['faces'] = internals['faces']
-                selected_objects['selected_mode'] = utils.get_select_mode()
+                selected_objects['select_mode'] = utils.get_select_mode()
             op = self.create_generic_operation(operator.name, selected_objects,active_object, mode)
         else:
             op = self.create_generic_operation(operator.name, target_objects,active_object, mode)
