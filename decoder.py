@@ -47,35 +47,36 @@ class Decoder:
         deselected_edges = []
         deselected_faces = []
         
-        #create a bmesh to store the edit mode data of the object
-        bm = utils.create_bmesh(active_object)
-        for i in internals['verts']:
-            #do not reselect an vertex if it does not exist (e.g the vertex was deleted)
-            try:
-                bm.verts[i].select = flag
-                if flag == False:
-                    deselected_verts.append(i)
-            #simply catch the exception and pass
-            except IndexError:
-                pass
-        for i in internals['edges']:
-            #do not reselect an edge if it does not exist (e.g. the edge was deleted)
-            try:
-                bm.edges[i].select = flag
-                if flag == False:
-                    deselected_edges.append(i)
-            #simply catch the exception and pass
-            except IndexError:
-                pass
-        for i in internals['faces']:
-            #do not reselect an face if it does not exist (e.g. the face was deleted)
-            try:
-                bm.faces[i].select = flag
-                if flag == False:
-                    deselected_faces.append(i)
-            #simple catch the exception and pass
-            except IndexError:
-                pass
+        if active_object != '':
+            #create a bmesh to store the edit mode data of the object
+            bm = utils.create_bmesh(active_object)
+            for i in internals['verts']:
+                #do not reselect an vertex if it does not exist (e.g the vertex was deleted)
+                try:
+                    bm.verts[i].select = flag
+                    if flag == False:
+                        deselected_verts.append(i)
+                #simply catch the exception and pass
+                except IndexError:
+                    pass
+            for i in internals['edges']:
+                #do not reselect an edge if it does not exist (e.g. the edge was deleted)
+                try:
+                    bm.edges[i].select = flag
+                    if flag == False:
+                        deselected_edges.append(i)
+                #simply catch the exception and pass
+                except IndexError:
+                    pass
+            for i in internals['faces']:
+                #do not reselect an face if it does not exist (e.g. the face was deleted)
+                try:
+                    bm.faces[i].select = flag
+                    if flag == False:
+                        deselected_faces.append(i)
+                #simple catch the exception and pass
+                except IndexError:
+                    pass
                 
         deselected_internals['verts'] = deselected_verts
         deselected_internals['edges'] = deselected_edges
@@ -101,27 +102,30 @@ class Decoder:
            select_mode    -- a dictionary object containing boolean values representing each select mode (vertex_select, edge_select, face_select)
         '''
         
-        if bpy.context.active_object != None:
-            current_active = bpy.context.active_object.name
-        else:
-            current_active = ''
         current_mode = bpy.context.mode
         current_selected = ''
         current_internals = ''
         current_select_mode = ''
         
-        #1. deselect current selection
+        if bpy.context.active_object != None:
+            current_active = bpy.context.active_object.name
         
-        #deselect currently selected objects if in object mode
-        if current_mode in ('OBJECT'):
-            selected_objs = utils.get_obj_names(bpy.context.selected_objects)
-            current_selected = self.refocus_object_mode(selected_objs,False)
+            #1. deselect current selection
             
-        #deselect currently selected internals if in edit mode
-        elif current_mode in ('EDIT_MESH'):
-            current_select_mode = utils.get_select_mode()
-            selected_internals = utils.get_internals(current_active)
-            current_internals = self.refocus_edit_mode(current_active,selected_internals,False)
+            #deselect currently selected objects if in object mode
+            if current_mode in ('OBJECT'):
+                selected_objs = utils.get_obj_names(bpy.context.selected_objects)
+                current_selected = self.refocus_object_mode(selected_objs,False)
+                
+            #deselect currently selected internals if in edit mode
+            elif current_mode in ('EDIT_MESH'):
+                current_select_mode = utils.get_select_mode()
+                selected_internals = utils.get_internals(current_active)
+                current_internals = self.refocus_edit_mode(current_active,selected_internals,False)
+        
+        else:
+            current_active = ''
+            bpy.context.scene.objects.active = bpy.data.objects[1]
         
         #2. shift mode if necessary
         
